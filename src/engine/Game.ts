@@ -8,10 +8,15 @@ export class Game {
     private renderer: THREE.WebGLRenderer;
     private physicsWorld: CANNON.World;
     private vehicle: Vehicle;
+    private followCamera: boolean = true;
+    private cameraOffset: THREE.Vector3 = new THREE.Vector3(0, 7, 12);
 
     constructor() {
-        // Initialize Three.js scene
+        // Initialize Three.js scene with fog for better depth perception
         this.scene = new THREE.Scene();
+        this.scene.fog = new THREE.Fog(0xaaaaaa, 10, 100);
+        this.scene.background = new THREE.Color(0x87ceeb); // Sky blue background
+        
         this.camera = new THREE.PerspectiveCamera(
             75,
             window.innerWidth / window.innerHeight,
@@ -19,10 +24,17 @@ export class Game {
             1000
         );
         
-        // Initialize renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        // Initialize renderer with improved settings
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            alpha: true
+        });
         this.renderer.setSize(window.innerWidth, window.innerHeight);
         this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Better shadow quality
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.outputEncoding = THREE.sRGBEncoding;
+        
         const appDiv = document.querySelector<HTMLDivElement>('#app');
         if (!appDiv) throw new Error('#app element not found');
         appDiv.innerHTML = ''; // Clear any existing content
@@ -35,8 +47,8 @@ export class Game {
 
         const defaultMaterial = new CANNON.Material('default');
         const defaultContactMaterial = new CANNON.ContactMaterial(defaultMaterial, defaultMaterial, {
-            friction: 0.8,          // Increased friction
-            restitution: 0.1,       // Reduced bounciness
+            friction: 0.7,             // Good friction for driving
+            restitution: 0.1,          // Reduced bounciness
             contactEquationStiffness: 1e6,
             contactEquationRelaxation: 3
         });
@@ -48,25 +60,99 @@ export class Game {
         this.camera.position.set(0, 10, 20);
         this.camera.lookAt(0, 0, 0);
 
-        // Add basic lighting
+        // Add improved lighting
+        // Ambient light for overall scene brightness
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambientLight);
 
+        // Main directional light (sun)
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
+        directionalLight.position.set(50, 100, 50);
         directionalLight.castShadow = true;
+        
+        // Improve shadow quality
+        directionalLight.shadow.mapSize.width = 2048;
+        directionalLight.shadow.mapSize.height = 2048;
+        directionalLight.shadow.camera.near = 0.5;
+        directionalLight.shadow.camera.far = 500;
+        directionalLight.shadow.camera.left = -50;
+        directionalLight.shadow.camera.right = 50;
+        directionalLight.shadow.camera.top = 50;
+        directionalLight.shadow.camera.bottom = -50;
+        
         this.scene.add(directionalLight);
 
-        // Add ground plane with improved material
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshPhongMaterial({ 
-            color: 0x666666,
-            side: THREE.DoubleSide
+        // Add secondary fill light from opposite direction
+        const fillLight = new THREE.DirectionalLight(0xffffaa, 0.3);
+        fillLight.position.set(-50, 40, -50);
+        this.scene.add(fillLight);
+
+        // Create improved ground texture
+        const textureLoader = new THREE.TextureLoader();
+        const groundSize = 200;
+        
+        // Create a larger, more realistic ground
+        const groundGeometry = new THREE.PlaneGeometry(groundSize, groundSize, 32, 32);
+        const groundMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x111111,  // Asphalt color
+            roughness: 0.9,
+            metalness: 0.1,
         });
+        
         const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
         groundMesh.rotation.x = -Math.PI / 2;
         groundMesh.receiveShadow = true;
         this.scene.add(groundMesh);
+
+        // Add road markings
+        const roadWidth = 10;
+        const roadLength = groundSize;
+        
+        // Main road
+        const roadGeometry = new THREE.PlaneGeometry(roadWidth, roadLength);
+        const roadMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0x333333,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+        roadMesh.rotation.x = -Math.PI / 2;
+        roadMesh.position.y = 0.01; // Slightly above the ground to prevent z-fighting
+        this.scene.add(roadMesh);
+        
+        // Add road markings (center line)
+        const lineWidth = 0.3;
+        const lineGeometry = new THREE.PlaneGeometry(lineWidth, roadLength);
+        const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
+        lineMesh.rotation.x = -Math.PI / 2;
+        lineMesh.position.y = 0.02; // Slightly above the road
+        this.scene.add(lineMesh);
+        
+        // Add dashed lines on the sides of the road
+        const dashLength = 3;
+        const dashGap = 2;
+        const dashesCount = Math.floor(roadLength / (dashLength + dashGap));
+        const sideOffset = roadWidth / 2 - 0.5;
+        
+        for (let i = 0; i < dashesCount; i++) {
+            const position = -roadLength/2 + (dashLength/2) + i * (dashLength + dashGap);
+            
+            // Left side dash
+            const leftDashGeometry = new THREE.PlaneGeometry(lineWidth, dashLength);
+            const leftDashMesh = new THREE.Mesh(leftDashGeometry, lineMaterial);
+            leftDashMesh.rotation.x = -Math.PI / 2;
+            leftDashMesh.position.set(-sideOffset, 0.02, position);
+            this.scene.add(leftDashMesh);
+            
+            // Right side dash
+            const rightDashMesh = leftDashMesh.clone();
+            rightDashMesh.position.x = sideOffset;
+            this.scene.add(rightDashMesh);
+        }
+        
+        // Add obstacles for fun
+        this.addObstacles();
 
         // Add ground physics with improved material
         const groundBody = new CANNON.Body({
@@ -79,16 +165,53 @@ export class Game {
 
         // Create vehicle
         this.vehicle = new Vehicle(this.scene, this.physicsWorld);
-
-        // Adjust camera position for better view
-        this.camera.position.set(0, 15, 30);
-        this.camera.lookAt(0, 0, 0);
+        
+        // Set up camera controls
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'c') {
+                this.followCamera = !this.followCamera;
+            }
+        });
 
         // Handle window resize
         window.addEventListener('resize', this.onWindowResize.bind(this));
 
         // Start the game loop
         this.animate();
+    }
+    
+    private addObstacles() {
+        // Add some obstacles to make driving more interesting
+        
+        // Create a simple box obstacle
+        const createBox = (width: number, height: number, depth: number, position: THREE.Vector3, color: number) => {
+            // Visual mesh
+            const geometry = new THREE.BoxGeometry(width, height, depth);
+            const material = new THREE.MeshPhongMaterial({ color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            this.scene.add(mesh);
+            
+            // Physics body
+            const shape = new CANNON.Box(new CANNON.Vec3(width/2, height/2, depth/2));
+            const body = new CANNON.Body({
+                mass: 0, // Static obstacle
+                position: new CANNON.Vec3(position.x, position.y, position.z),
+                shape
+            });
+            this.physicsWorld.addBody(body);
+        };
+        
+        // Create a few boxes around the scene
+        createBox(2, 2, 2, new THREE.Vector3(6, 1, -15), 0xff4444);
+        createBox(3, 1, 3, new THREE.Vector3(-8, 0.5, -10), 0x44ff44);
+        createBox(2, 3, 2, new THREE.Vector3(7, 1.5, 10), 0x4444ff);
+        createBox(5, 1.5, 1, new THREE.Vector3(-6, 0.75, 15), 0xffff44);
+        
+        // Create some ramps
+        createBox(8, 1, 4, new THREE.Vector3(0, 0.5, -30), 0x996633);
     }
 
     private onWindowResize(): void {
@@ -105,6 +228,34 @@ export class Game {
         
         // Update vehicle
         this.vehicle.update();
+        
+        // Update camera if follow mode is enabled
+        if (this.followCamera) {
+            // Get vehicle position from physics body and create Vector3
+            const vehiclePosition = new THREE.Vector3(
+                this.vehicle.mesh.position.x,
+                this.vehicle.mesh.position.y,
+                this.vehicle.mesh.position.z
+            );
+            
+            // Get vehicle rotation as Quaternion
+            const vehicleQuaternion = this.vehicle.mesh.quaternion.clone();
+            
+            // Create a matrix from the vehicle's rotation
+            const rotationMatrix = new THREE.Matrix4().makeRotationFromQuaternion(vehicleQuaternion);
+            
+            // Apply the rotation to the camera offset
+            const rotatedOffset = this.cameraOffset.clone().applyMatrix4(rotationMatrix);
+            
+            // Calculate camera position
+            const cameraPosition = vehiclePosition.clone().add(rotatedOffset);
+            
+            // Smoothly move camera
+            this.camera.position.lerp(cameraPosition, 0.1);
+            
+            // Make camera look at vehicle
+            this.camera.lookAt(vehiclePosition);
+        }
         
         // Render scene
         this.renderer.render(this.scene, this.camera);
