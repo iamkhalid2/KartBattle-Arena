@@ -9,7 +9,6 @@ class CarGame {
   private car!: THREE.Group;
   private road!: THREE.Mesh;
   private obstacles: THREE.Mesh[] = [];
-  private lastTime = 0;
   private speed = 0;
   private maxSpeed = 0.5;
   private acceleration = 0.01;
@@ -62,7 +61,7 @@ class CarGame {
     this.createObstacles();
     
     // Start game loop
-    this.animate(0);
+    this.animate();
   }
 
   private createSkybox(): void {
@@ -269,7 +268,7 @@ class CarGame {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
-  private updateCarPosition(deltaTime: number): void {
+  private updateCarPosition(): void {
     if (this.gameOver) return;
     
     // Handle acceleration and deceleration
@@ -395,24 +394,32 @@ class CarGame {
     document.body.appendChild(gameOverElement);
   }
 
-  private animate(time: number): void {
-    requestAnimationFrame((t) => this.animate(t));
+  private animate(): void {
+    requestAnimationFrame(() => this.animate());
     
     // Update skybox position to follow camera
     if (this.skybox) {
       this.skybox.position.copy(this.camera.position);
     }
     
-    const deltaTime = time - this.lastTime;
-    this.lastTime = time;
-    
-    this.updateCarPosition(deltaTime);
+    this.updateCarPosition();
     this.checkCollisions();
     this.renderer.render(this.scene, this.camera);
   }
 }
 
 // Start the game
-window.addEventListener('DOMContentLoaded', () => {
+function initGame(): void {
   const game = new CarGame();
-});
+  (window as any).gameInstance = game; // Store game instance on window
+}
+
+declare global {
+  interface Window {
+    gameInstance: CarGame;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', initGame);
+
+
