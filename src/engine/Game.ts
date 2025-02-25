@@ -33,7 +33,6 @@ export class Game {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Better shadow quality
         this.renderer.setPixelRatio(window.devicePixelRatio);
-        this.renderer.outputEncoding = THREE.sRGBEncoding;
         
         const appDiv = document.querySelector<HTMLDivElement>('#app');
         if (!appDiv) throw new Error('#app element not found');
