@@ -1,13 +1,38 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three.js Car Game</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      display: block;
+    }
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: white;
+      background-color: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="instructions">
+    <h3>Controls:</h3>
+    <p>W or ↑ - Accelerate</p>
+    <p>S or ↓ - Brake/Reverse</p>
+    <p>A or ← - Move Left</p>
+    <p>D or → - Move Right</p>
+    <p>R - Restart Game (after game over)</p>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
 </html>
