@@ -24,6 +24,7 @@ export class World {
   private spawnManager: SpawnManager;
   private hazardManager: HazardManager;
   
+  
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     

@@ -13,6 +13,7 @@ export class Game {
   private inputManager: InputManager;
   private gameOver = false;
   private score = 0;
+  private lastFrameTime: number = 0;
 
   constructor() {
     // Set up scene
@@ -22,8 +23,8 @@ export class Game {
     this.camera = new THREE.PerspectiveCamera(
       75, 
       window.innerWidth / window.innerHeight, 
-      0.1, 
-      1000
+      0.1,
+      3000 // Increased far clipping plane to accommodate the skybox
     );
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);
@@ -146,12 +147,16 @@ export class Game {
   }
   
   private animate(): void {
+    const now = performance.now();
+    const deltaTime = (now - this.lastFrameTime) / 1000; // Convert to seconds
+    this.lastFrameTime = now;
+
     requestAnimationFrame(() => this.animate());
     
     if (!this.gameOver) {
       // Update game state
       this.car.update();
-      this.world.update(this.car.getPosition());
+      this.world.update(deltaTime);
       this.updateCamera();
       this.checkCollisions();
     }
