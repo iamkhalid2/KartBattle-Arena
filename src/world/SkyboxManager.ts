@@ -13,22 +13,59 @@ export class SkyboxManager {
   }
 
   private createSkybox(): THREE.Mesh {
-    // Create a skybox using BoxGeometry with specific materials for each face
-    const size = 2000;
+    // Create a skybox using BoxGeometry with a CubeTextureMapping approach
+    const size = 2500; // Increase the size slightly
     const skyGeometry = new THREE.BoxGeometry(size, size, size);
     
-    // Create materials for each face of the cube
-    const skyMaterials = [
-      new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // right
-      new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // left
-      new THREE.MeshBasicMaterial({ color: 0x4CA3DD, side: THREE.BackSide }), // top (slightly darker blue)
-      new THREE.MeshBasicMaterial({ color: 0x267F00, side: THREE.BackSide }), // bottom (green, matching ground)
-      new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide }), // front
-      new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide })  // back
+    // Use a single material with BackSide rendering for all faces
+    // This ensures the skybox is always rendered correctly regardless of camera angle
+    const skyMaterial = new THREE.MeshBasicMaterial({
+      side: THREE.BackSide,
+      vertexColors: true,
+      fog: false // Ensure the skybox isn't affected by fog
+    });
+    
+    // Create the skybox mesh with the material
+    const skybox = new THREE.Mesh(skyGeometry, skyMaterial);
+    
+    // Add vertex colors to create a gradient sky effect
+    const colors = [
+      new THREE.Color(0x87CEEB), // Sky blue
+      new THREE.Color(0x4CA3DD), // Darker blue
+      new THREE.Color(0x267F00)  // Green for ground
     ];
     
-    // Create the skybox mesh with the materials array
-    const skybox = new THREE.Mesh(skyGeometry, skyMaterials);
+    // Get the position attribute of the geometry
+    const positionAttribute = skyGeometry.getAttribute('position');
+    const vertexCount = positionAttribute.count;
+    
+    // Create a color attribute
+    const colorAttribute = new THREE.BufferAttribute(new Float32Array(vertexCount * 3), 3);
+    skyGeometry.setAttribute('color', colorAttribute);
+    
+    // Set vertex colors based on position
+    for (let i = 0; i < vertexCount; i++) {
+      const y = positionAttribute.getY(i);
+      const normalizedY = (y / (size / 2) + 1) / 2; // Convert to range 0-1
+      
+      let color;
+      if (y < -size / 3) {
+        // Bottom part (ground)
+        color = colors[2];
+      } else if (y > size / 3) {
+        // Upper part (sky)
+        color = colors[0];
+      } else {
+        // Middle part (horizon)
+        const t = (y + size / 3) / (2 * size / 3); // Normalize to 0-1
+        color = new THREE.Color().lerpColors(colors[1], colors[0], t);
+      }
+      
+      colorAttribute.setXYZ(i, color.r, color.g, color.b);
+    }
+    
+    // Add the skybox to the scene with a high renderOrder to ensure it's rendered last
+    skybox.renderOrder = -1000;
     this.scene.add(skybox);
     
     return skybox;
@@ -36,7 +73,11 @@ export class SkyboxManager {
   
   private createClouds(): void {
     const cloudGeometry = new THREE.SphereGeometry(2, 8, 8);
-    const cloudMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const cloudMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.8
+    });
     
     for (let i = 0; i < 200; i++) {
       const cloud = new THREE.Mesh(cloudGeometry, cloudMaterial);
@@ -58,6 +99,9 @@ export class SkyboxManager {
   public updatePosition(playerPosition: THREE.Vector3): void {
     // Update skybox position to follow the player
     this.skybox.position.copy(playerPosition);
+    
+    // Ensure the skybox is always rendered (not culled)
+    this.skybox.frustumCulled = false;
   }
   
   public reset(): void {

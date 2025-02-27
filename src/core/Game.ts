@@ -14,6 +14,8 @@ export class Game {
   private gameOver = false;
   private score = 0;
   private lastFrameTime: number = 0;
+  private isMobile: boolean = false;
+  private mobileControlsVisible: boolean = false;
 
   constructor() {
     // Set up scene
@@ -39,12 +41,18 @@ export class Game {
     
     // Initialize input manager
     this.inputManager = new InputManager();
+    this.isMobile = this.inputManager.isMobileDevice();
     
     // Create world
     this.world = new World(this.scene);
     
     // Create car
     this.car = new Car(this.scene, this.inputManager);
+    
+    // Update instructions for mobile
+    if (this.isMobile) {
+      this.updateMobileInstructions();
+    }
     
     // Start game loop
     this.animate();
@@ -54,6 +62,14 @@ export class Game {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+
+  private updateMobileInstructions(): void {
+    const instructions = document.getElementById('instructions');
+    if (instructions) {
+      // Remove the instructions div on mobile as we use on-screen controls instead
+      instructions.style.display = 'none';
+    }
   }
 
   private updateCamera(): void {
@@ -100,6 +116,7 @@ export class Game {
       scoreElement.style.color = 'white';
       scoreElement.style.fontSize = '24px';
       scoreElement.style.fontFamily = 'Arial, sans-serif';
+      scoreElement.style.zIndex = '100';
       document.body.appendChild(scoreElement);
     }
     
@@ -123,12 +140,44 @@ export class Game {
     gameOverElement.style.fontSize = '36px';
     gameOverElement.style.fontFamily = 'Arial, sans-serif';
     gameOverElement.style.textAlign = 'center';
-    gameOverElement.innerHTML = `
-      <h1>Game Over</h1>
-      <p>Your score: ${this.score}</p>
-      <p>Press 'R' to restart</p>
-    `;
-    document.body.appendChild(gameOverElement);
+    gameOverElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    gameOverElement.style.padding = '20px';
+    gameOverElement.style.borderRadius = '10px';
+    gameOverElement.style.zIndex = '999';
+
+    if (this.isMobile) {
+      gameOverElement.innerHTML = `
+        <h1>Game Over</h1>
+        <p>Your score: ${this.score}</p>
+        <div id="restart-button" style="
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 15px 32px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 4px 2px;
+          cursor: pointer;
+          border-radius: 5px;
+        ">Restart Game</div>
+      `;
+      document.body.appendChild(gameOverElement);
+      
+      // Add touch event listener to restart button
+      const restartButton = document.getElementById('restart-button');
+      if (restartButton) {
+        restartButton.addEventListener('touchstart', () => this.restartGame());
+      }
+    } else {
+      gameOverElement.innerHTML = `
+        <h1>Game Over</h1>
+        <p>Your score: ${this.score}</p>
+        <p>Press 'R' to restart</p>
+      `;
+      document.body.appendChild(gameOverElement);
+    }
   }
   
   private restartGame(): void {
@@ -162,7 +211,7 @@ export class Game {
     }
     
     // Handle restart input
-    if (this.gameOver && this.inputManager.isKeyPressed('r')) {
+    if (this.gameOver && !this.isMobile && this.inputManager.isKeyPressed('r')) {
       this.restartGame();
     }
     
