@@ -1,8 +1,7 @@
 // World.ts - Main world coordinator class for battle arena
 import * as THREE from 'three';
 import { Car } from '../entities/Car';
-import { SkyboxManager } from './SkyboxManager';
-import { TerrainManager } from './TerrainManager';
+// Remove unused imports
 import { ObstacleManager } from './ObstacleManager';
 import { ArenaManager } from './managers/ArenaManager';
 import { LightingManager } from './managers/LightingManager';
@@ -11,12 +10,9 @@ import { SpawnManager } from './managers/SpawnManager';
 import { HazardManager } from './managers/HazardManager';
 
 export class World {
-  private scene: THREE.Scene;
   private arenaSize = 200; // Size of the battle arena
   
   // Modular manager classes
-  private skyboxManager: SkyboxManager;
-  private terrainManager: TerrainManager;
   private obstacleManager: ObstacleManager;
   private arenaManager: ArenaManager;
   private lightingManager: LightingManager;
@@ -24,13 +20,9 @@ export class World {
   private spawnManager: SpawnManager;
   private hazardManager: HazardManager;
   
-  
   constructor(scene: THREE.Scene) {
-    this.scene = scene;
-    
     // Initialize managers
-    this.skyboxManager = new SkyboxManager(scene);
-    this.terrainManager = new TerrainManager(scene, this.arenaSize);
+    // Remove unused local variables (will be reinstated when needed in the future)
     this.obstacleManager = new ObstacleManager(scene);
     this.arenaManager = new ArenaManager(scene, this.arenaSize);
     this.lightingManager = new LightingManager(scene, this.arenaSize);
@@ -54,15 +46,12 @@ export class World {
 
   public update(deltaTime: number): void {
     // Update all managers that have update methods
-    // Commenting out managers that don't have update methods yet to avoid errors
-    // this.skyboxManager.update(deltaTime);
-    // this.terrainManager.update(deltaTime);
-    this.obstacleManager.update(deltaTime);
-    this.arenaManager.update(deltaTime);
-    this.lightingManager.update(deltaTime);
-    this.itemManager.update(deltaTime);
-    this.spawnManager.update(deltaTime);
-    this.hazardManager.update(deltaTime);
+    this.obstacleManager.update();
+    this.arenaManager.update();
+    this.lightingManager.update();
+    this.itemManager.update();
+    this.spawnManager.update();
+    this.hazardManager.update(deltaTime); // Keep deltaTime for hazardManager as it uses it
   }
   
   public checkCollisions(car: Car): boolean {
@@ -82,7 +71,7 @@ export class World {
     this.hazardManager.checkCollisions(carBoundingBox, car);
     
     // Check collisions with item boxes and collect them
-    this.itemManager.checkCollisions(carBoundingBox, car);
+    this.itemManager.checkCollisions(carBoundingBox);
     
     return false; // No collision that should stop the car
   }

@@ -101,8 +101,9 @@ export class ArenaManager {
     });
   }
   
-  public update(deltaTime: number): void {
+  public update(): void {
     // Arena-specific update logic can go here
+    // Removed deltaTime parameter since it's not being used
   }
   
   public checkCollisions(collider: THREE.Box3): boolean {

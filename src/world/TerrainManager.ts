@@ -91,8 +91,9 @@ export class TerrainManager {
     }
   }
   
-  public getTerrainHeight(x: number, z: number): number {
+  public getTerrainHeight(): number {
     // For now, the terrain is flat at y=0
+    // Removed unused x and z parameters since they're not being used for height calculation
     return 0;
   }
   

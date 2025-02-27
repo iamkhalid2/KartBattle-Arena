@@ -16,6 +16,7 @@ export class Car {
   private distanceTraveled: number = 0;
   private initialPosition: THREE.Vector3;
   private wheels: THREE.Mesh[] = [];
+  private health: number = 100; // Add health property for damage handling
 
   constructor(scene: THREE.Scene, inputManager: InputManager) {
     this.inputManager = inputManager;
@@ -159,12 +160,41 @@ export class Car {
     this.speed = 0;
   }
   
+  // Add takeDamage method to handle damage from hazards
+  public takeDamage(amount: number, sourcePosition: THREE.Vector3): void {
+    this.health -= amount;
+    
+    // Apply a knockback effect based on the source position
+    const knockbackDirection = new THREE.Vector3()
+      .subVectors(this.position, sourcePosition)
+      .normalize();
+    
+    // Add some upward component to make it more dramatic
+    knockbackDirection.y = 0.5;
+    
+    // Apply an impulse to the car's speed in the knockback direction
+    this.speed -= 0.2; // Slow down the car when hit
+    
+    if (this.health <= 0) {
+      // Car is destroyed
+      this.health = 0;
+      this.stop();
+    }
+  }
+
+  // Add getter for health
+  public getHealth(): number {
+    return this.health;
+  }
+  
+  // Update the reset method to also reset health
   public reset(): void {
     this.position.copy(this.initialPosition);
     this.direction.set(0, 0, 1);
     this.rotation = 0;
     this.speed = 0;
     this.distanceTraveled = 0;
+    this.health = 100; // Reset health
     this.mesh.position.copy(this.position);
     this.mesh.rotation.y = this.rotation;
   }

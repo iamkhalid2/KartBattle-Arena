@@ -2,8 +2,7 @@
 export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private isMobile: boolean = false;
-  private touchForwardInput: number = 0;
-  private touchTurnInput: number = 0;
+  // Removed unused touch input variables since they're not being used
   private acceleratorPressed: boolean = false;
   private brakePressed: boolean = false;
   private steeringAngle: number = 0;

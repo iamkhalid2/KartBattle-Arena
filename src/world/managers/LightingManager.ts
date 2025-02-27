@@ -71,8 +71,9 @@ export class LightingManager {
     }
   }
   
-  public update(deltaTime: number): void {
+  public update(): void {
     // Update lighting effects if needed
     // e.g., color cycling, intensity changes, etc.
+    // Removed unused deltaTime parameter
   }
 }

@@ -40,8 +40,9 @@ export class SpawnManager {
     }
   }
   
-  public update(deltaTime: number): void {
+  public update(): void {
     // Animate spawn points if needed
+    // Removed unused deltaTime parameter
     this.spawnMarkers.forEach(marker => {
       marker.rotation.y += 0.01;
     });

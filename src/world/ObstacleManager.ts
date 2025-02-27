@@ -76,8 +76,9 @@ export class ObstacleManager {
     return false; // No collision
   }
   
-  public update(deltaTime: number): void {
+  public update(): void {
     // Update logic for obstacles - can be empty if no animation/movement is needed
+    // Removed unused deltaTime parameter
   }
   
   public getEntitiesForMinimap(): any[] {

@@ -15,7 +15,6 @@ export class Game {
   private score = 0;
   private lastFrameTime: number = 0;
   private isMobile: boolean = false;
-  private mobileControlsVisible: boolean = false;
 
   constructor() {
     // Set up scene

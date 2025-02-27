@@ -128,7 +128,7 @@ export class HazardManager {
     this.hazards.forEach(hazard => {
       switch (hazard.userData.hazardType) {
         case 'spikes':
-          this.updateSpikes(hazard, deltaTime);
+          this.updateSpikes(hazard);
           break;
         case 'crusher':
           this.updateCrusher(hazard, deltaTime);
@@ -137,7 +137,8 @@ export class HazardManager {
     });
   }
   
-  private updateSpikes(hazard: THREE.Object3D, deltaTime: number): void {
+  private updateSpikes(hazard: THREE.Object3D): void {
+    // Removed unused deltaTime parameter
     const now = Date.now();
     
     // Check if it's time to activate
@@ -186,10 +187,8 @@ export class HazardManager {
         }
         
         if (dealDamage) {
-          // Apply damage if car has a takeDamage method
-          if (car && typeof car['takeDamage'] === 'function') {
-            car['takeDamage'](hazard.userData.damage, hazard.position);
-          }
+          // Apply damage to the car using the proper method
+          car.takeDamage(hazard.userData.damage, hazard.position);
         }
       }
     });

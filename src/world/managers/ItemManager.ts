@@ -1,14 +1,13 @@
 import * as THREE from 'three';
-import { Car } from '../../entities/Car';
 
 export class ItemManager {
   private scene: THREE.Scene;
-  private arenaSize: number;
   private itemBoxes: THREE.Object3D[] = [];
   
-  constructor(scene: THREE.Scene, arenaSize: number) {
+  // Since we're no longer using arenaSize but it might be needed by calling code,
+  // use underscore to mark it as intentionally ignored
+  constructor(scene: THREE.Scene, _: number) {
     this.scene = scene;
-    this.arenaSize = arenaSize;
   }
   
   public createItemBoxes(): void {
@@ -45,7 +44,8 @@ export class ItemManager {
     }
   }
   
-  public update(deltaTime: number): void {
+  public update(): void {
+    // Removed unused deltaTime parameter
     // Rotate item boxes
     this.itemBoxes.forEach(box => {
       if (!box.userData.collected) {
@@ -57,19 +57,20 @@ export class ItemManager {
     });
   }
   
-  public checkCollisions(collider: THREE.Box3, car: Car): void {
+  public checkCollisions(collider: THREE.Box3): void {
     // Check collisions with item boxes and collect them
     this.itemBoxes.forEach(box => {
       if (!box.userData.collected) {
         const boxBoundingBox = new THREE.Box3().setFromObject(box);
         if (collider.intersectsBox(boxBoundingBox)) {
-          this.collectItemBox(box, car);
+          this.collectItemBox(box);
         }
       }
     });
   }
   
-  private collectItemBox(box: THREE.Object3D, car: Car): void {
+  private collectItemBox(box: THREE.Object3D): void {
+    // Removed unused car parameter
     // Mark as collected and hide
     box.userData.collected = true;
     box.visible = false;

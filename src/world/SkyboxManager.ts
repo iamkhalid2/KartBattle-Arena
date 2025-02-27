@@ -46,7 +46,7 @@ export class SkyboxManager {
     // Set vertex colors based on position
     for (let i = 0; i < vertexCount; i++) {
       const y = positionAttribute.getY(i);
-      const normalizedY = (y / (size / 2) + 1) / 2; // Convert to range 0-1
+      // Removed unused normalizedY variable
       
       let color;
       if (y < -size / 3) {
