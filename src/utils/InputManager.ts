@@ -121,7 +121,19 @@ export class InputManager {
     steeringWheel.style.border = '8px solid rgba(200, 200, 200, 0.7)';
     steeringWheel.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
     steeringWheel.style.pointerEvents = 'auto';
-    steeringWheel.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);">⟳</div>';
+    steeringWheel.style.position = 'relative';
+    steeringWheel.style.transform = 'rotate(0deg)';
+    steeringWheel.style.transition = 'transform 0.1s ease-out';
+    
+    // Add spokes to the steering wheel
+    const spokesHTML = `
+      <div style="position: absolute; top: 50%; left: 0; right: 0; height: 10px; background-color: rgba(200, 200, 200, 0.8); transform: translateY(-50%);"></div>
+      <div style="position: absolute; top: 0; bottom: 0; left: 50%; width: 10px; background-color: rgba(200, 200, 200, 0.8); transform: translateX(-50%);"></div>
+      <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+        <div style="width: 20px; height: 20px; background-color: rgba(200, 200, 200, 0.9); border-radius: 50%;"></div>
+      </div>
+    `;
+    steeringWheel.innerHTML = spokesHTML;
     
     // Add controls to the DOM
     pedalsContainer.appendChild(accelerator);
@@ -198,8 +210,14 @@ export class InputManager {
     const deltaX = touchX - wheelCenterX;
     
     // Normalize to get a value between -1 and 1
+    // Fix: Invert the value so left is positive (turn left) and right is negative (turn right)
+    // This matches the keyboard controls where left arrow = 1 and right arrow = -1
     const maxDistance = wheelRect.width / 2;
-    this.steeringAngle = Math.max(-1, Math.min(1, deltaX / maxDistance));
+    this.steeringAngle = -Math.max(-1, Math.min(1, deltaX / maxDistance));
+    
+    // Visually rotate the wheel for feedback (-45 to +45 degrees)
+    const rotationDegrees = this.steeringAngle * -45; // Negative because we want the top to move in the direction of turning
+    steeringWheel.style.transform = `rotate(${rotationDegrees}deg)`;
   }
 
   private checkOrientation(): void {
