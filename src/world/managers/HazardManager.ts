@@ -18,12 +18,12 @@ export class HazardManager {
   }
   
   private createLavaAreas(): void {
-    // Create lava pits or other damage-dealing areas
+    // Create lava pits or other damage-dealing areas with reduced intensity
     const lavaGeometry = new THREE.CircleGeometry(15, 32);
     const lavaMaterial = new THREE.MeshBasicMaterial({
       color: 0xff3300,
       transparent: true,
-      opacity: 0.7
+      opacity: 0.4  // Reduced from 0.7 to 0.4
     });
     
     // Add a few lava pits in the arena corners
@@ -41,8 +41,8 @@ export class HazardManager {
       lavaMesh.userData = {
         type: 'hazard',
         hazardType: 'lava',
-        damage: 10,
-        damageInterval: 500 // milliseconds
+        damage: 5,  // Reduced from 10 to 5
+        damageInterval: 800  // Increased from 500 to 800 milliseconds to slow down damage rate
       };
       
       this.scene.add(lavaMesh);
@@ -133,12 +133,27 @@ export class HazardManager {
         case 'crusher':
           this.updateCrusher(hazard, deltaTime);
           break;
+        case 'lava':
+          this.updateLavaEffect(hazard);
+          break;
       }
     });
   }
   
-  private updateSpikes(hazard: THREE.Object3D): void {
+  private updateLavaEffect(hazard: THREE.Object3D): void {
+    // Fix: Cast to THREE.Mesh to properly access the material property
     // Removed unused deltaTime parameter
+    if (hazard instanceof THREE.Mesh && hazard.material instanceof THREE.MeshBasicMaterial) {
+      const pulseAmount = 0.1;
+      const pulseSpeed = 1.5;
+      
+      // Create a subtle pulsing effect
+      const baseOpacity = 0.4; // Match the opacity set in createLavaAreas
+      hazard.material.opacity = baseOpacity + Math.sin(Date.now() * 0.001 * pulseSpeed) * pulseAmount;
+    }
+  }
+  
+  private updateSpikes(hazard: THREE.Object3D): void {
     const now = Date.now();
     
     // Check if it's time to activate
@@ -189,6 +204,11 @@ export class HazardManager {
         if (dealDamage) {
           // Apply damage to the car using the proper method
           car.takeDamage(hazard.userData.damage, hazard.position);
+          
+          // If it's a lava hazard, also slow down the car
+          if (hazard.userData.hazardType === 'lava') {
+            car.applySlowEffect(0.7); // Apply a 30% slowdown effect
+          }
         }
       }
     });

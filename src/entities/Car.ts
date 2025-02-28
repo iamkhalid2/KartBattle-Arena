@@ -10,6 +10,7 @@ export class Car {
   private rotation: number = 0; // Rotation in radians
   private speed: number = 0;
   private maxSpeed: number = 0.5;
+  private currentMaxSpeed: number = 0.5; // For temporary speed effects
   private acceleration: number = 0.01;
   private deceleration: number = 0.005;
   private turnSpeed: number = 0.03; // How fast the car can turn
@@ -17,6 +18,7 @@ export class Car {
   private initialPosition: THREE.Vector3;
   private wheels: THREE.Mesh[] = [];
   private health: number = 100; // Add health property for damage handling
+  private slowEffectEndTime: number = 0; // When the slow effect ends
 
   constructor(scene: THREE.Scene, inputManager: InputManager) {
     this.inputManager = inputManager;
@@ -93,6 +95,9 @@ export class Car {
   }
 
   public update(): void {
+    // Check if slow effect has expired
+    this.updateSpeedEffects();
+    
     // Get input
     const forwardInput = this.inputManager.getForwardInput();
     const turnInput = this.inputManager.getTurnInput();
@@ -118,8 +123,8 @@ export class Car {
       }
     }
     
-    // Clamp speed
-    this.speed = Math.max(-this.maxSpeed / 2, Math.min(this.maxSpeed, this.speed));
+    // Clamp speed to current maximum (which may be affected by slow effects)
+    this.speed = Math.max(-this.currentMaxSpeed / 2, Math.min(this.currentMaxSpeed, this.speed));
     
     // Apply turning based on input and current speed
     if (Math.abs(this.speed) > 0.01) {
@@ -156,6 +161,45 @@ export class Car {
     if (this.speed > 0) {
       this.distanceTraveled += this.speed;
     }
+  }
+  
+  // Update any active speed effects
+  private updateSpeedEffects(): void {
+    const now = Date.now();
+    
+    // Check if slow effect has expired
+    if (this.slowEffectEndTime > 0 && now >= this.slowEffectEndTime) {
+      // Reset to normal max speed
+      this.currentMaxSpeed = this.maxSpeed;
+      this.slowEffectEndTime = 0;
+      
+      // Clear any visual effects on the car
+      this.mesh.traverse(object => {
+        if (object instanceof THREE.Mesh && 
+            object.material instanceof THREE.MeshStandardMaterial) {
+          object.material.emissive = new THREE.Color(0x000000);
+        }
+      });
+    }
+  }
+  
+  // Method to apply a slow effect to the car
+  public applySlowEffect(speedFactor: number, duration: number = 1000): void {
+    // Apply speed reduction factor (0.7 means 70% of normal speed)
+    this.currentMaxSpeed = this.maxSpeed * speedFactor;
+    
+    // Set when the effect will end
+    this.slowEffectEndTime = Date.now() + duration;
+    
+    // Add a visual effect to show the car is slowed
+    this.mesh.traverse(object => {
+      if (object instanceof THREE.Mesh && 
+          object.material instanceof THREE.MeshStandardMaterial) {
+        // Add a slight red glow to indicate the car is slowed
+        object.material.emissive = new THREE.Color(0x330000);
+        object.material.emissiveIntensity = 0.3;
+      }
+    });
   }
   
   public getPosition(): THREE.Vector3 {
@@ -222,10 +266,26 @@ export class Car {
     this.direction.set(0, 0, 1);
     this.rotation = 0;
     this.speed = 0;
+    this.currentMaxSpeed = this.maxSpeed; // Reset to normal speed
+    this.slowEffectEndTime = 0;
     this.distanceTraveled = 0;
     this.health = 100; // Reset health
     this.mesh.position.copy(this.position);
     this.mesh.rotation.y = this.rotation;
+    
+    // Reset any visual effects
+    this.mesh.traverse(object => {
+      if (object instanceof THREE.Mesh && 
+          object.material instanceof THREE.MeshStandardMaterial) {
+        object.material.emissive = new THREE.Color(0x000000);
+        
+        // Reset emissive for headlights - special case
+        if (object.position.z > 1.5 && object.position.y < 1) {
+          object.material.emissive = new THREE.Color(0xFFFF00);
+          object.material.emissiveIntensity = 0.5;
+        }
+      }
+    });
   }
   
   public getCollider(): THREE.Box3 {
