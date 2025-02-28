@@ -2,10 +2,10 @@
 export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private isMobile: boolean = false;
-  // Removed unused touch input variables since they're not being used
   private acceleratorPressed: boolean = false;
   private brakePressed: boolean = false;
   private steeringAngle: number = 0;
+  private joystickActive: boolean = false; // Track if joystick is being used
 
   constructor() {
     // Set up keyboard controls
@@ -51,7 +51,15 @@ export class InputManager {
     if (steeringWheel) {
       steeringWheel.addEventListener('touchstart', (e) => { this.handleSteeringTouch(e); });
       steeringWheel.addEventListener('touchmove', (e) => { this.handleSteeringTouch(e); });
-      steeringWheel.addEventListener('touchend', () => { this.steeringAngle = 0; });
+      steeringWheel.addEventListener('touchend', () => { this.resetJoystick(); });
+      // Handle case when touch moves outside of joystick area
+      steeringWheel.addEventListener('touchcancel', () => { this.resetJoystick(); });
+      // Handle case when touch is interrupted
+      document.addEventListener('touchend', (e) => {
+        if (this.joystickActive && !steeringWheel.contains(e.target as Node)) {
+          this.resetJoystick();
+        }
+      });
     }
   }
   
@@ -104,35 +112,38 @@ export class InputManager {
     brake.style.pointerEvents = 'auto';
     brake.innerHTML = 'BRAKE';
     
-    // Create steering wheel container (right side)
+    // Create steering container (right side)
     const steeringContainer = document.createElement('div');
     steeringContainer.style.display = 'flex';
     steeringContainer.style.alignItems = 'flex-end';
     steeringContainer.style.padding = '20px';
     steeringContainer.style.pointerEvents = 'none';
     
-    // Create steering wheel
+    // Create joystick (replacing steering wheel)
     const steeringWheel = document.createElement('div');
     steeringWheel.id = 'steering-wheel';
     steeringWheel.style.width = '100px';
     steeringWheel.style.height = '100px';
     steeringWheel.style.borderRadius = '50%';
-    steeringWheel.style.border = '8px solid rgba(200, 200, 200, 0.7)';
     steeringWheel.style.backgroundColor = 'rgba(100, 100, 100, 0.5)';
+    steeringWheel.style.border = '3px solid rgba(200, 200, 200, 0.7)';
     steeringWheel.style.pointerEvents = 'auto';
     steeringWheel.style.position = 'relative';
-    steeringWheel.style.transform = 'rotate(0deg)';
-    steeringWheel.style.transition = 'transform 0.1s ease-out';
     
-    // Add spokes to the steering wheel
-    const spokesHTML = `
-      <div style="position: absolute; top: 50%; left: 0; right: 0; height: 10px; background-color: rgba(200, 200, 200, 0.8); transform: translateY(-50%);"></div>
-      <div style="position: absolute; top: 0; bottom: 0; left: 50%; width: 10px; background-color: rgba(200, 200, 200, 0.8); transform: translateX(-50%);"></div>
-      <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
-        <div style="width: 20px; height: 20px; background-color: rgba(200, 200, 200, 0.9); border-radius: 50%;"></div>
-      </div>
-    `;
-    steeringWheel.innerHTML = spokesHTML;
+    // Add joystick thumb/handle instead of spokes
+    const joystickHandle = document.createElement('div');
+    joystickHandle.id = 'joystick-handle';
+    joystickHandle.style.width = '40px';
+    joystickHandle.style.height = '40px';
+    joystickHandle.style.borderRadius = '50%';
+    joystickHandle.style.backgroundColor = 'rgba(200, 200, 200, 0.9)';
+    joystickHandle.style.position = 'absolute';
+    joystickHandle.style.top = '50%';
+    joystickHandle.style.left = '50%';
+    joystickHandle.style.transform = 'translate(-50%, -50%)';
+    joystickHandle.style.transition = 'transform 0.1s ease-out';
+    
+    steeringWheel.appendChild(joystickHandle);
     
     // Add controls to the DOM
     pedalsContainer.appendChild(accelerator);
@@ -198,25 +209,42 @@ export class InputManager {
     event.preventDefault();
     
     const steeringWheel = document.getElementById('steering-wheel');
-    if (!steeringWheel) return;
+    const joystickHandle = document.getElementById('joystick-handle');
+    if (!steeringWheel || !joystickHandle) return;
     
     const touch = event.touches[0];
     const wheelRect = steeringWheel.getBoundingClientRect();
     const wheelCenterX = wheelRect.left + wheelRect.width / 2;
     
-    // Calculate horizontal distance from center of wheel
-    const touchX = touch.clientX;
-    const deltaX = touchX - wheelCenterX;
+    // Mark joystick as active
+    this.joystickActive = true;
     
-    // Normalize to get a value between -1 and 1
-    // Fix: Invert the value so left is positive (turn left) and right is negative (turn right)
-    // This matches the keyboard controls where left arrow = 1 and right arrow = -1
-    const maxDistance = wheelRect.width / 2;
-    this.steeringAngle = -Math.max(-1, Math.min(1, deltaX / maxDistance));
+    // Calculate horizontal distance from center point
+    const deltaX = touch.clientX - wheelCenterX;
     
-    // Visually rotate the wheel for feedback (-45 to +45 degrees)
-    const rotationDegrees = this.steeringAngle * -45; // Negative because we want the top to move in the direction of turning
-    steeringWheel.style.transform = `rotate(${rotationDegrees}deg)`;
+    // Calculate joystick position (constrained to wheel boundaries)
+    const maxDistance = wheelRect.width / 2 - 20; // 20px is half of joystick handle width
+    const joystickX = Math.max(-maxDistance, Math.min(maxDistance, deltaX));
+    
+    // Calculate steering angle from joystick position (-1 to 1)
+    this.steeringAngle = -(joystickX / maxDistance);
+    
+    // Update joystick handle position
+    joystickHandle.style.transform = `translate(calc(-50% + ${joystickX}px), -50%)`;
+  }
+  
+  private resetJoystick(): void {
+    if (!this.joystickActive) return;
+    
+    const joystickHandle = document.getElementById('joystick-handle');
+    if (joystickHandle) {
+      // Reset joystick handle position
+      joystickHandle.style.transform = 'translate(-50%, -50%)';
+    }
+    
+    // Reset steering angle
+    this.steeringAngle = 0;
+    this.joystickActive = false;
   }
 
   private checkOrientation(): void {
