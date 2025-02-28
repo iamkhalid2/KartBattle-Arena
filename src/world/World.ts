@@ -106,7 +106,27 @@ export class World {
   }
   
   public getRandomSpawnPoint(): THREE.Vector3 {
-    return this.spawnManager.getRandomSpawnPoint();
+    // Get all hazard positions to avoid spawning near them
+    const hazardPositions = this.getHazardPositions();
+    
+    // Use the improved spawn point method that avoids hazards
+    return this.spawnManager.getRandomSpawnPointAwayFromHazards(hazardPositions);
+  }
+  
+  private getHazardPositions(): THREE.Vector3[] {
+    const hazardPositions: THREE.Vector3[] = [];
+    
+    // Get positions of all hazards in the HazardManager
+    const hazardObjects = this.hazardManager.getHazardPositions();
+    if (hazardObjects && hazardObjects.length) {
+      hazardPositions.push(...hazardObjects);
+    }
+    
+    // Get positions of the central arena decoration
+    const centralPosition = new THREE.Vector3(0, 0, 0);
+    hazardPositions.push(centralPosition); // Avoid spawning at the center
+    
+    return hazardPositions;
   }
   
   public getEntitiesForMinimap(): any[] {

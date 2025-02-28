@@ -246,4 +246,19 @@ export class HazardManager {
       }
     });
   }
+  
+  // Add method to get hazard positions for spawn point management
+  public getHazardPositions(): THREE.Vector3[] {
+    const hazardPositions: THREE.Vector3[] = [];
+    
+    // Collect positions of all hazards
+    this.hazards.forEach(hazard => {
+      // For lava areas, which are the main concern for spawning
+      if (hazard.userData.hazardType === 'lava') {
+        hazardPositions.push(hazard.position.clone());
+      }
+    });
+    
+    return hazardPositions;
+  }
 }
