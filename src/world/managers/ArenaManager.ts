@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+import { Font } from 'three/addons/loaders/FontLoader.js';
 
 export class ArenaManager {
   private scene: THREE.Scene;
@@ -8,6 +11,7 @@ export class ArenaManager {
   private arenaElements: THREE.Object3D[] = [];
   private hazardObjects: THREE.Object3D[] = [];
   private time: number = 0;
+  private sponsorMaterials: THREE.Material[] = [];
   
   constructor(scene: THREE.Scene, arenaSize: number) {
     this.scene = scene;
@@ -15,12 +19,13 @@ export class ArenaManager {
     this.arenaFloor = new THREE.Mesh(); // Initialize to avoid undefined
   }
 
-  public createArena(): void {
+  public async createArena(): Promise<void> {
     this.createFloor();
     this.createWalls();
     this.createCorners();
     this.addArenaDecoration();
     this.addHazardElements();
+    await this.addSponsorship();
   }
   
   private createFloor(): void {
@@ -422,6 +427,104 @@ export class ArenaManager {
       this.scene.add(obstacle);
       this.hazardObjects.push(obstacle);
     }
+  }
+  
+  private async loadFont(): Promise<Font> {
+    const loader = new FontLoader();
+    return new Promise((resolve, reject) => {
+      loader.load(
+        '/node_modules/three/examples/fonts/helvetiker_bold.typeface.json',
+        resolve,
+        undefined,
+        reject
+      );
+    });
+  }
+
+  private async addSponsorship(): Promise<void> {
+    // Load Bustan logo texture
+    const textureLoader = new THREE.TextureLoader();
+    const logoTexture = textureLoader.load('/sponsors/bustan.svg');
+    logoTexture.encoding = THREE.sRGBEncoding;
+    logoTexture.colorSpace = THREE.SRGBColorSpace;  // Ensure correct color space
+
+    // Load font for tagline
+    const font = await this.loadFont();
+
+    // Create sponsor panels for each wall
+    const wallHeight = 15;
+    const sponsorWidth = 30;
+    const sponsorHeight = 10;
+    const halfSize = this.arenaSize / 2;
+
+    // Create materials
+    const sponsorMaterial = new THREE.MeshStandardMaterial({
+      map: logoTexture,
+      transparent: true,
+      metalness: 0,
+      roughness: 0.1,
+      side: THREE.DoubleSide  // Ensure logo is visible from both sides
+    });
+
+    const taglineMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffd700, // Gold color
+      metalness: 0.7,
+      roughness: 0.2,
+      emissive: 0xffd700,
+      emissiveIntensity: 0.3
+    });
+
+    // Create sponsorship panels for each wall
+    const wallPositions = [
+      { pos: new THREE.Vector3(0, wallHeight/2, -halfSize), rot: 0 },
+      { pos: new THREE.Vector3(0, wallHeight/2, halfSize), rot: Math.PI },
+      { pos: new THREE.Vector3(-halfSize, wallHeight/2, 0), rot: Math.PI/2 },
+      { pos: new THREE.Vector3(halfSize, wallHeight/2, 0), rot: -Math.PI/2 }
+    ];
+
+    wallPositions.forEach((wall) => {
+      // Create logo panel
+      const logoPanel = new THREE.Mesh(
+        new THREE.PlaneGeometry(sponsorWidth, sponsorHeight),
+        sponsorMaterial
+      );
+      logoPanel.position.copy(wall.pos);
+      logoPanel.rotation.y = wall.rot;
+      logoPanel.position.y += 2; // Position above the center
+      
+      // Offset from wall slightly to prevent z-fighting
+      const normalVector = new THREE.Vector3(0, 0, 1).applyAxisAngle(new THREE.Vector3(0, 1, 0), wall.rot);
+      logoPanel.position.add(normalVector.multiplyScalar(0.1));
+
+      // Create tagline text with loaded font
+      const taglineGeometry = new TextGeometry("Baking Happiness", {
+        font: font,
+        size: 2,
+        height: 0.2,
+        curveSegments: 12,
+        bevelEnabled: true,
+        bevelThickness: 0.05,
+        bevelSize: 0.05,
+        bevelSegments: 5
+      });
+
+      // Center the text geometry
+      taglineGeometry.computeBoundingBox();
+      const textWidth = (taglineGeometry.boundingBox?.max.x || 0) - (taglineGeometry.boundingBox?.min.x || 0);
+      
+      const tagline = new THREE.Mesh(taglineGeometry, taglineMaterial);
+      tagline.position.copy(wall.pos);
+      tagline.rotation.y = wall.rot;
+      tagline.position.y -= sponsorHeight/2 + 1; // Position below the logo
+      tagline.position.x -= textWidth/2; // Center horizontally
+
+      this.scene.add(logoPanel);
+      this.scene.add(tagline);
+      this.arenaElements.push(logoPanel);
+      this.arenaElements.push(tagline);
+      this.sponsorMaterials.push(sponsorMaterial);
+      this.sponsorMaterials.push(taglineMaterial);
+    });
   }
   
   public update(deltaTime: number): void {
