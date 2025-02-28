@@ -17,7 +17,9 @@ export class SpawnManager {
     
     for (let i = 0; i < spawnCount; i++) {
       const angle = (i / spawnCount) * Math.PI * 2;
-      const distanceFromCenter = this.arenaSize * 0.4; // 40% from center to edge
+      // Increase the distance from center to ensure we're away from slowing circles
+      // Using 0.65 instead of 0.4 to place spawns closer to the edge and away from hazards
+      const distanceFromCenter = this.arenaSize * 0.65; 
       
       const x = Math.cos(angle) * distanceFromCenter;
       const z = Math.sin(angle) * distanceFromCenter;
@@ -42,15 +44,31 @@ export class SpawnManager {
   
   public update(): void {
     // Animate spawn points if needed
-    // Removed unused deltaTime parameter
     this.spawnMarkers.forEach(marker => {
       marker.rotation.y += 0.01;
     });
   }
   
   public getRandomSpawnPoint(): THREE.Vector3 {
+    // Make sure we have spawn points
+    if (this.spawnPoints.length === 0) {
+      // If no spawn points are defined yet, create a safe default
+      return new THREE.Vector3(this.arenaSize * 0.6, 0, this.arenaSize * 0.6);
+    }
+    
     const index = Math.floor(Math.random() * this.spawnPoints.length);
     return this.spawnPoints[index].clone();
+  }
+  
+  // This method allows us to check if a given point is near any spawn points
+  // Useful for validating locations for other objects
+  public isNearSpawnPoint(position: THREE.Vector3, minDistance: number = 10): boolean {
+    for (const spawnPoint of this.spawnPoints) {
+      if (position.distanceTo(spawnPoint) < minDistance) {
+        return true;
+      }
+    }
+    return false;
   }
   
   public getEntitiesForMinimap(): any[] {
@@ -69,5 +87,6 @@ export class SpawnManager {
   
   public reset(): void {
     // Reset any dynamic spawn point properties if needed
+    // Currently no dynamic properties to reset
   }
 }
