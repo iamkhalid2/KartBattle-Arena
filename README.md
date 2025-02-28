@@ -73,7 +73,7 @@ A lightweight, browser-based multiplayer battle car game where players drive veh
 ### Installation
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/kartbattle-arena.git
+git clone https://github.com/iamkhalid2/kartbattle-arena.git
 cd kartbattle-arena
 ```
 
