@@ -30,9 +30,17 @@ export class Game {
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);
     
-    // Set up renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Set up renderer with improved visual quality
+    this.renderer = new THREE.WebGLRenderer({ 
+      antialias: true,
+      powerPreference: 'high-performance' 
+    });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadow edges
+    this.renderer.outputEncoding = THREE.sRGBEncoding; // Improved color rendering
+    this.renderer.toneMappingExposure = 1.0;
     document.body.appendChild(this.renderer.domElement);
     
     // Handle window resize
@@ -47,6 +55,10 @@ export class Game {
     
     // Create car
     this.car = new Car(this.scene, this.inputManager);
+    
+    // Move car to a spawn point
+    const spawnPoint = this.world.getRandomSpawnPoint();
+    this.car.setPosition(spawnPoint);
     
     // Update instructions for mobile
     if (this.isMobile) {
@@ -101,6 +113,17 @@ export class Game {
     // Update score based on distance traveled
     this.score = Math.floor(this.car.getDistanceTraveled());
     this.updateScoreDisplay();
+  }
+  
+  private updateCarTerrainHeight(): void {
+    // Get car position
+    const carPosition = this.car.getPosition();
+    
+    // Get terrain height at car position
+    const terrainHeight = this.world.getTerrainHeightAt(carPosition.x, carPosition.z);
+    
+    // Apply terrain height to car
+    this.car.setTerrainHeight(terrainHeight);
   }
   
   private updateScoreDisplay(): void {
@@ -184,13 +207,17 @@ export class Game {
     this.score = 0;
     this.car.reset();
     
+    // Move car to a spawn point
+    const spawnPoint = this.world.getRandomSpawnPoint();
+    this.car.setPosition(spawnPoint);
+    
     // Remove game over message
     const gameOverElement = document.getElementById('gameOver');
     if (gameOverElement) {
       document.body.removeChild(gameOverElement);
     }
     
-    // Reset obstacles
+    // Reset world
     this.world.reset();
   }
   
@@ -202,10 +229,22 @@ export class Game {
     requestAnimationFrame(() => this.animate());
     
     if (!this.gameOver) {
-      // Update game state
+      // Update car (controls & physics)
       this.car.update();
+      
+      // Update car height based on terrain
+      this.updateCarTerrainHeight();
+      
+      // Update world (including all managers)
       this.world.update(deltaTime);
+      
+      // Update skybox position to follow player
+      this.world.updatePlayerPosition(this.car.getPosition());
+      
+      // Update camera position
       this.updateCamera();
+      
+      // Check for collisions
       this.checkCollisions();
     }
     

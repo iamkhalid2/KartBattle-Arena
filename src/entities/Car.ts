@@ -82,6 +82,14 @@ export class Car {
     
     // Position car at origin
     this.mesh.position.copy(this.position);
+    
+    // Set up shadows
+    this.mesh.traverse(object => {
+      if (object instanceof THREE.Mesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+      }
+    });
   }
 
   public update(): void {
@@ -128,6 +136,12 @@ export class Car {
           wheel.rotation.y = turnInput * Math.PI / 8;
         }
       });
+      
+      // Animate wheel rotation
+      const wheelRotationSpeed = this.speed * 0.5;
+      this.wheels.forEach(wheel => {
+        wheel.rotation.x += wheelRotationSpeed;
+      });
     }
     
     // Move car based on speed and direction
@@ -146,6 +160,21 @@ export class Car {
   
   public getPosition(): THREE.Vector3 {
     return this.position.clone();
+  }
+  
+  public setPosition(newPosition: THREE.Vector3): void {
+    this.position.copy(newPosition);
+    this.mesh.position.copy(this.position);
+    
+    // Update initial position for reset
+    this.initialPosition.copy(newPosition);
+  }
+  
+  public setTerrainHeight(height: number): void {
+    // Adjust the car's Y position based on terrain height
+    // Adding a small offset to keep the car above the ground
+    this.position.y = height + 0.5;
+    this.mesh.position.y = this.position.y;
   }
   
   public getDirection(): THREE.Vector3 {
