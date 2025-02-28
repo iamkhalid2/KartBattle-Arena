@@ -1,117 +1,68 @@
-# KartBattle.io
+# KartBattle Arena
 
-A fast-paced, multiplayer battle kart game where players drive go-karts, collect weapons, and eliminate opponents in an arena-style deathmatch, built with Three.js and TypeScript.
+A lightweight, browser-based multiplayer battle car game where players drive vehicles, collect weapons, and eliminate opponents in fast-paced arena matches.
 
 ## 🎮 Game Overview
 
-**KartBattle.io** is a browser-based 3D battle kart game. Players control customizable go-karts in various arenas, collecting weapons and power-ups while trying to eliminate opponents. The core gameplay revolves around driving skills, strategic weapon use, and avoiding enemy attacks.
+**KartBattle Arena** is a multiplayer battle car game focused on quick matches and easy setup. Players enter rooms with a simple code, drive customizable vehicles, collect mystery boxes for weapons, and battle until only one remains.
 
-### Core Game Mechanics
-- **Third-person driving** with physics-based controls including drifting
-- **Weapon pickups** and strategic combat
-- **Arena-style maps** with hazards and power-ups
-- **Real-time multiplayer** with matchmaking
-- **Customizable karts** and characters
+## 1️⃣ Game Architecture (Minimal & Optimized)
 
-## ⚙️ Implementation Plan
+### Frontend (Three.js + WebSockets)
+- Players can **create** or **join** a room by entering a **6-digit code**
+- Players input only their **name** before entering
+- Game logic (movement, shooting, health, physics) runs primarily **client-side**
+- WebSockets handle **state synchronization** with the server
 
-### Phase 1: Core Driving Mechanics and Single-Player Foundation
-**Timeline: 2-3 weeks**
+### Backend (Lightweight Game Server)
+- **Colyseus (Recommended) or Socket.io** → WebSocket-based room management
+- **Google Cloud Run (Best for cost-efficiency) OR Compute Engine (Dedicated)** → Host the server
+- **In-memory state (NO DB)** → Room states are stored **only in RAM** (Redis optional for multiple instances)
+- **Auto-destroy empty rooms** → If no players remain in a room, it gets deleted
 
-- [x] ~~Set up project structure with Three.js, TypeScript, and build tools~~
-- [x] ~~Implement basic car physics and controls~~
-- [x] ~~Create camera system that follows the player~~
-- [x] ~~Build initial terrain and obstacle generation~~
-- [ ] Refine car physics to include drifting mechanics
-- [ ] Add car collision detection improvements and response physics
-- [ ] Implement visual effects (skid marks, dust particles, etc.)
-- [ ] Create a basic UI system (health bar, speedometer, minimap)
+## 2️⃣ Game Flow
 
-### Phase 2: Weapons System and Combat
-**Timeline: 2-3 weeks**
+### 🔹 Room Creation & Joining
+1. Player **clicks "Create Room"** → Server assigns a **random 6-digit code** and waits for players
+2. Player **clicks "Join Room"** → They enter a code and their **name**, then the server checks if the room exists
+3. Once all players join, **game starts** (host can optionally trigger it)
 
-- [ ] Design and implement weapon pickup system
-- [ ] Create item boxes with random drops
-- [ ] Implement base weapon class and inheritance structure
-- [ ] Add projectile weapons (machine gun, rockets)
-- [ ] Add area-effect weapons (mines, bombs)
-- [ ] Implement defensive items (shields, speed boosts)
-- [ ] Create weapon visual effects and animations
-- [ ] Add sound effects for weapons and pickups
-- [ ] Implement damage system and kart destruction effects
+### 🔹 Gameplay (Core Mechanics)
 
-### Phase 3: Arena Design and Game Modes
-**Timeline: 2-3 weeks**
+#### Movement & Shooting
+- Player movements (car controls) are handled **client-side** for responsiveness
+- WebSocket messages sync position updates every **30ms (tickrate ~30Hz)**
+- Shooting events trigger **server-side validation** before broadcasting to other players
 
-- [ ] Design multiple battle arena maps
-- [ ] Implement dynamic obstacles and hazards
-- [ ] Create spawn points and respawn logic
-- [ ] Add match timing system and scoreboard
-- [ ] Implement game modes:
-  - [ ] Deathmatch
-  - [ ] Team Battle
-  - [ ] Capture the Flag
-- [ ] Add end-of-match statistics and rewards
-- [ ] Implement AI opponents for single-player mode
+#### Mystery Boxes & Weapons
+- Boxes spawn randomly on the **server**
+- When a player collects one, the server **assigns a random weapon** and **broadcasts** it
+- Shooting events are processed on the **server first** before sending damage updates
 
-### Phase 4: Networking and Multiplayer
-**Timeline: 3-4 weeks**
+#### Health & Death
+- Server tracks each player's **health**
+- When a player's HP reaches **0**, they are **removed from the game**
+- The **last player standing wins**
 
-- [ ] Set up WebSocket server for real-time communication
-- [ ] Implement client-server architecture
-- [ ] Add player authentication and profiles
-- [ ] Create matchmaking system
-- [ ] Implement network synchronization for:
-  - [ ] Player positions and physics
-  - [ ] Weapon firing and hit detection
-  - [ ] Item box states
-- [ ] Add latency compensation techniques
-- [ ] Create private lobby system for friends
-- [ ] Implement chat functionality
+#### Room Closure
+- Once the game ends, the server **destroys the room** after a short delay
 
-### Phase 5: Progression and Customization
-**Timeline: 2-3 weeks**
+## 3️⃣ Best Hosting Strategy (Fast & Cost-Efficient)
 
-- [ ] Design player progression system (XP, levels)
-- [ ] Implement unlockable content:
-  - [ ] Kart bodies and parts
-  - [ ] Paint jobs and decals
-  - [ ] Character skins
-- [ ] Create garage/customization UI
-- [ ] Add achievements and challenges
-- [ ] Implement virtual economy (optional)
-- [ ] Create player profile pages
+| Component | Tech |
+|-----------|------|
+| **Game Server** | **Node.js + Colyseus (or Socket.io)**, hosted on **Google Cloud Run** (best for auto-scaling) OR **Compute Engine** (for more control) |
+| **Frontend Hosting** | Firebase Hosting (Fast, free tier) OR Vercel (Easy) |
+| **Database** | **None** (everything runs in-memory, no need for Firestore/SQL) |
+| **Scaling** | Since player count is low (~10-15), a **single Google Cloud Run instance** should be enough. If scaling up, use **Redis for state sharing** |
 
-### Phase 6: Polish, Optimization and Launch
-**Timeline: 2-3 weeks**
+## 4️⃣ Optimization Tips for a FAST Experience
 
-- [ ] Optimize rendering for various devices
-- [ ] Implement LOD (Level of Detail) system for distant objects
-- [ ] Add advanced visual effects (bloom, motion blur, etc.)
-- [ ] Create tutorial system for new players
-- [ ] Polish UI/UX across all screens
-- [ ] Conduct thorough testing (performance, balance, fun)
-- [ ] Implement analytics and monitoring
-- [ ] Prepare launch strategy and marketing materials
-
-## 🛠️ Technical Architecture
-
-### Frontend
-- **Rendering**: Three.js for 3D graphics
-- **Game Logic**: TypeScript
-- **Build Tools**: Vite
-- **UI Framework**: Custom UI system with HTML/CSS
-
-### Backend (Phase 4+)
-- **Server**: Node.js with Express
-- **Real-time Communication**: WebSockets (Socket.io)
-- **Database**: MongoDB for player data and statistics
-- **Authentication**: JWT (JSON Web Tokens)
-
-### Deployment
-- **Frontend Hosting**: Vercel/Netlify
-- **Backend Hosting**: Heroku/DigitalOcean
-- **CI/CD**: GitHub Actions
+✅ **Keep WebSocket messages small** → Send only deltas (changes in position, not full coordinates)  
+✅ **Client-side interpolation & prediction** → Reduces lag for smooth movement  
+✅ **Use Fixed Timesteps (`dt = 16ms`)** → Keeps physics & movement consistent  
+✅ **Destroy inactive rooms quickly** → Saves memory  
+✅ **Use MessagePack or CBOR (not JSON)** → Smaller data packets = less latency  
 
 ## 🚀 Getting Started
 
@@ -122,8 +73,8 @@ A fast-paced, multiplayer battle kart game where players drive go-karts, collect
 ### Installation
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/kartbattle-io.git
-cd kartbattle-io
+git clone https://github.com/yourusername/kartbattle-arena.git
+cd kartbattle-arena
 ```
 
 2. Install dependencies
@@ -142,7 +93,7 @@ npm run build
 ```
 
 ## 📝 Contributing
-We welcome contributions to KartBattle.io! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions to KartBattle Arena! Please open an issue or pull request.
 
 ## 📜 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the LICENSE file for details.
