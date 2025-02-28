@@ -433,7 +433,7 @@ export class ArenaManager {
     const loader = new FontLoader();
     return new Promise((resolve, reject) => {
       loader.load(
-        '/node_modules/three/examples/fonts/helvetiker_bold.typeface.json',
+        './fonts/helvetiker_bold.typeface.json', // Updated path to use public directory
         resolve,
         undefined,
         reject
@@ -442,9 +442,9 @@ export class ArenaManager {
   }
 
   private async addSponsorship(): Promise<void> {
-    // Load Bustan logo texture
+    // Load Bustan logo texture with correct public path
     const textureLoader = new THREE.TextureLoader();
-    const logoTexture = textureLoader.load('/sponsors/bustan.svg');
+    const logoTexture = textureLoader.load('./sponsors/bustan.svg'); // Updated path to use public directory
     logoTexture.encoding = THREE.sRGBEncoding;
     logoTexture.colorSpace = THREE.SRGBColorSpace;  // Ensure correct color space
 
