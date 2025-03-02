@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { Car } from '../entities/Car';
 import { World } from '../world/World';
 import { InputManager } from '../utils/InputManager';
-import Stats from 'three/examples/jsm/libs/stats.module';
+import Stats from 'stats.js';
 
 export class Game {
   private scene: THREE.Scene;
@@ -48,10 +48,9 @@ export class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap; // Better performance than PCFSoftShadowMap
-    this.renderer.outputEncoding = THREE.sRGBEncoding; // Improved color rendering
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace; // Modern replacement for outputEncoding
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.autoClear = false; // For manual clearing - better performance
-    this.renderer.physicallyCorrectLights = false; // Disable for performance
     document.body.appendChild(this.renderer.domElement);
 
     // Add stats for performance monitoring

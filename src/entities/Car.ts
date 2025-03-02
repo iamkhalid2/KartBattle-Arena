@@ -19,6 +19,12 @@ export class Car {
   private wheels: THREE.Mesh[] = [];
   private health: number = 100; // Add health property for damage handling
   private slowEffectEndTime: number = 0; // When the slow effect ends
+  
+  // Performance optimization
+  private previousPosition: THREE.Vector3;
+  private targetPosition: THREE.Vector3;
+  private previousRotation: number = 0;
+  private targetRotation: number = 0;
 
   constructor(scene: THREE.Scene, inputManager: InputManager) {
     this.inputManager = inputManager;
@@ -26,6 +32,10 @@ export class Car {
     this.position = new THREE.Vector3(0, 0, 0);
     this.initialPosition = this.position.clone();
     this.direction = new THREE.Vector3(0, 0, 1); // Forward direction (Z+)
+    
+    // For interpolation
+    this.previousPosition = this.position.clone();
+    this.targetPosition = this.position.clone();
     
     this.createCarModel();
     scene.add(this.mesh);
@@ -94,7 +104,12 @@ export class Car {
     });
   }
 
-  public update(): void {
+  // Update method now accepts delta time for fixed timestep
+  public update(deltaTime: number = 1/60): void {
+    // Store previous state for interpolation
+    this.previousPosition.copy(this.position);
+    this.previousRotation = this.rotation;
+    
     // Check if slow effect has expired
     this.updateSpeedEffects();
     
@@ -102,23 +117,27 @@ export class Car {
     const forwardInput = this.inputManager.getForwardInput();
     const turnInput = this.inputManager.getTurnInput();
     
+    // Scale acceleration by delta time for consistency
+    const scaledAcceleration = this.acceleration * (deltaTime * 60); // normalized to 60fps
+    const scaledDeceleration = this.deceleration * (deltaTime * 60);
+    
     // Apply acceleration/deceleration based on input
     if (forwardInput > 0) {
       // Accelerate forward
-      this.speed += this.acceleration;
+      this.speed += scaledAcceleration;
     } else if (forwardInput < 0) {
       // Accelerate backward
-      this.speed -= this.acceleration;
+      this.speed -= scaledAcceleration;
     } else {
       // Natural deceleration when no key is pressed
       if (this.speed > 0) {
-        this.speed -= this.deceleration;
+        this.speed -= scaledDeceleration;
       } else if (this.speed < 0) {
-        this.speed += this.deceleration;
+        this.speed += scaledDeceleration;
       }
       
       // Prevent small floating-point speeds
-      if (Math.abs(this.speed) < this.deceleration) {
+      if (Math.abs(this.speed) < scaledDeceleration) {
         this.speed = 0;
       }
     }
@@ -126,10 +145,13 @@ export class Car {
     // Clamp speed to current maximum (which may be affected by slow effects)
     this.speed = Math.max(-this.currentMaxSpeed / 2, Math.min(this.currentMaxSpeed, this.speed));
     
+    // Scale turn speed by delta time
+    const scaledTurnSpeed = this.turnSpeed * (deltaTime * 60);
+    
     // Apply turning based on input and current speed
     if (Math.abs(this.speed) > 0.01) {
       // Only allow turning when the car is moving
-      this.rotation += turnInput * this.turnSpeed * (this.speed > 0 ? 1 : -1);
+      this.rotation += turnInput * scaledTurnSpeed * (this.speed > 0 ? 1 : -1);
       
       // Update direction vector based on rotation
       this.direction.x = Math.sin(this.rotation);
@@ -142,25 +164,48 @@ export class Car {
         }
       });
       
-      // Animate wheel rotation
-      const wheelRotationSpeed = this.speed * 0.5;
+      // Animate wheel rotation - scale by delta time
+      const wheelRotationSpeed = this.speed * 0.5 * (deltaTime * 60);
       this.wheels.forEach(wheel => {
         wheel.rotation.x += wheelRotationSpeed;
       });
     }
     
-    // Move car based on speed and direction
+    // Move car based on speed and direction - scale by delta time
     this.position.x += this.direction.x * this.speed;
     this.position.z += this.direction.z * this.speed;
     
-    // Update mesh position and rotation
-    this.mesh.position.copy(this.position);
-    this.mesh.rotation.y = this.rotation;
+    // Store target state for interpolation
+    this.targetPosition.copy(this.position);
+    this.targetRotation = this.rotation;
+    
+    // Update mesh position and rotation - will be interpolated in render
+    this.updateVisualPosition(1.0); // Full interpolation on physics update
     
     // Update distance traveled for score
     if (this.speed > 0) {
       this.distanceTraveled += this.speed;
     }
+  }
+  
+  // New method to interpolate visual position - called from render loop
+  public interpolatePosition(alpha: number): void {
+    this.updateVisualPosition(alpha);
+  }
+  
+  // Update the visual position of the car mesh with interpolation
+  private updateVisualPosition(alpha: number): void {
+    // Interpolate position
+    this.mesh.position.lerpVectors(this.previousPosition, this.targetPosition, alpha);
+    
+    // Interpolate rotation - handle potential angle wrapping
+    let rotDiff = this.targetRotation - this.previousRotation;
+    
+    // Handle angle wrapping (keep rotation differences in -PI to PI range)
+    if (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+    if (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+    
+    this.mesh.rotation.y = this.previousRotation + rotDiff * alpha;
   }
   
   // Update any active speed effects
@@ -208,6 +253,8 @@ export class Car {
   
   public setPosition(newPosition: THREE.Vector3): void {
     this.position.copy(newPosition);
+    this.previousPosition.copy(newPosition);
+    this.targetPosition.copy(newPosition);
     this.mesh.position.copy(this.position);
     
     // Update initial position for reset
@@ -218,6 +265,8 @@ export class Car {
     // Adjust the car's Y position based on terrain height
     // Adding a small offset to keep the car above the ground
     this.position.y = height + 0.5;
+    this.previousPosition.y = this.position.y;
+    this.targetPosition.y = this.position.y;
     this.mesh.position.y = this.position.y;
   }
   
@@ -263,8 +312,12 @@ export class Car {
   // Update the reset method to also reset health
   public reset(): void {
     this.position.copy(this.initialPosition);
+    this.previousPosition.copy(this.initialPosition);
+    this.targetPosition.copy(this.initialPosition);
     this.direction.set(0, 0, 1);
     this.rotation = 0;
+    this.previousRotation = 0;
+    this.targetRotation = 0;
     this.speed = 0;
     this.currentMaxSpeed = this.maxSpeed; // Reset to normal speed
     this.slowEffectEndTime = 0;
