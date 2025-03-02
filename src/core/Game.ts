@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Car } from '../entities/Car';
 import { World } from '../world/World';
 import { InputManager } from '../utils/InputManager';
+import Stats from 'three/examples/jsm/libs/stats.module';
 
 export class Game {
   private scene: THREE.Scene;
@@ -15,6 +16,13 @@ export class Game {
   private score = 0;
   private lastFrameTime: number = 0;
   private isMobile: boolean = false;
+  
+  // Performance optimization variables
+  private stats: Stats;
+  private fixedTimeStep: number = 1/60; // Target 60 FPS (16.67ms per frame)
+  private maxSubSteps: number = 3; // Max physics steps per frame to prevent spiral of death
+  private accumulator: number = 0; // Time accumulator for fixed timestep
+  private fpsElement: HTMLElement | null = null;
 
   constructor() {
     // Set up scene
@@ -30,18 +38,29 @@ export class Game {
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);
     
-    // Set up renderer with improved visual quality
+    // Set up renderer with improved visual quality and performance optimizations
     this.renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
-      powerPreference: 'high-performance' 
+      antialias: window.devicePixelRatio < 2, // Only use antialiasing on low-DPI devices
+      powerPreference: 'high-performance',
+      precision: 'mediump' // Medium precision for better performance
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Softer shadow edges
+    this.renderer.shadowMap.type = THREE.PCFShadowMap; // Better performance than PCFSoftShadowMap
     this.renderer.outputEncoding = THREE.sRGBEncoding; // Improved color rendering
     this.renderer.toneMappingExposure = 1.0;
+    this.renderer.autoClear = false; // For manual clearing - better performance
+    this.renderer.physicallyCorrectLights = false; // Disable for performance
     document.body.appendChild(this.renderer.domElement);
+
+    // Add stats for performance monitoring
+    this.stats = new Stats();
+    this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild(this.stats.dom);
+    
+    // Create FPS display
+    this.createFpsDisplay();
     
     // Handle window resize
     window.addEventListener('resize', () => this.onWindowResize());
@@ -65,8 +84,25 @@ export class Game {
       this.updateMobileInstructions();
     }
     
-    // Start game loop
+    // Start game loop with initial timestamp
+    this.lastFrameTime = performance.now();
     this.animate();
+  }
+
+  private createFpsDisplay(): void {
+    this.fpsElement = document.createElement('div');
+    this.fpsElement.id = 'fps';
+    this.fpsElement.style.position = 'absolute';
+    this.fpsElement.style.top = '10px';
+    this.fpsElement.style.right = '10px';
+    this.fpsElement.style.color = 'lime';
+    this.fpsElement.style.fontSize = '16px';
+    this.fpsElement.style.fontFamily = 'monospace';
+    this.fpsElement.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+    this.fpsElement.style.padding = '5px';
+    this.fpsElement.style.borderRadius = '3px';
+    this.fpsElement.style.zIndex = '100';
+    document.body.appendChild(this.fpsElement);
   }
 
   private onWindowResize(): void {
@@ -112,7 +148,11 @@ export class Game {
     
     // Update score based on distance traveled
     this.score = Math.floor(this.car.getDistanceTraveled());
-    this.updateScoreDisplay();
+    
+    // Only update score display every 10 frames to reduce DOM operations
+    if (this.score % 10 === 0) {
+      this.updateScoreDisplay();
+    }
   }
   
   private updateCarTerrainHeight(): void {
@@ -221,23 +261,57 @@ export class Game {
     this.world.reset();
   }
   
+  private updateFpsDisplay(fps: number): void {
+    if (this.fpsElement) {
+      this.fpsElement.textContent = `${Math.round(fps)} FPS`;
+      
+      // Color coding based on performance
+      if (fps >= 55) {
+        this.fpsElement.style.color = 'lime';
+      } else if (fps >= 30) {
+        this.fpsElement.style.color = 'yellow';
+      } else {
+        this.fpsElement.style.color = 'red';
+      }
+    }
+  }
+  
   private animate(): void {
-    const now = performance.now();
-    const deltaTime = (now - this.lastFrameTime) / 1000; // Convert to seconds
-    this.lastFrameTime = now;
-
-    requestAnimationFrame(() => this.animate());
+    // Start stats measurement
+    this.stats.begin();
     
-    if (!this.gameOver) {
-      // Update car (controls & physics)
-      this.car.update();
-      
-      // Update car height based on terrain
+    // Calculate delta time and handle frame timing
+    const now = performance.now();
+    let frameTime = (now - this.lastFrameTime) / 1000; // Convert to seconds
+    this.lastFrameTime = now;
+    
+    // Cap maximum frame time to prevent spiral of death on slow devices
+    if (frameTime > 0.25) frameTime = 0.25;
+    
+    // Accumulate time since last frame
+    this.accumulator += frameTime;
+    
+    // Fixed timestep updates
+    while (this.accumulator >= this.fixedTimeStep && !this.gameOver) {
+      // Physics and gameplay updates at fixed intervals
+      this.car.update(this.fixedTimeStep);
       this.updateCarTerrainHeight();
+      this.world.update(this.fixedTimeStep);
       
-      // Update world (including all managers)
-      this.world.update(deltaTime);
+      this.accumulator -= this.fixedTimeStep;
       
+      // Limit physics steps per frame to prevent spiral of death
+      if (this.maxSubSteps-- <= 0) {
+        this.accumulator = 0;
+        break;
+      }
+    }
+    
+    // Reset sub-steps counter
+    this.maxSubSteps = 3;
+    
+    // Non-physics updates (can run at variable framerate)
+    if (!this.gameOver) {
       // Update skybox position to follow player
       this.world.updatePlayerPosition(this.car.getPosition());
       
@@ -253,7 +327,20 @@ export class Game {
       this.restartGame();
     }
     
-    // Render scene
+    // Clear and render scene with proper depth sorting
+    this.renderer.clear();
     this.renderer.render(this.scene, this.camera);
+    
+    // Calculate and update FPS display (every 10 frames)
+    if (Math.floor(now / 100) % 10 === 0) {
+      const fps = 1 / frameTime;
+      this.updateFpsDisplay(fps);
+    }
+    
+    // End stats measurement
+    this.stats.end();
+    
+    // Queue up next frame
+    requestAnimationFrame(() => this.animate());
   }
 }
