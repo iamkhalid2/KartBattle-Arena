@@ -42,27 +42,23 @@ export class Car {
   }
 
   private createCarModel(): void {
-    // Car body
+    // Car body - Using simpler MeshLambertMaterial instead of MeshStandardMaterial
     const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
-    const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+    const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
     const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
     carBody.position.y = 0.5;
     this.mesh.add(carBody);
     
     // Car roof
     const roofGeometry = new THREE.BoxGeometry(1.5, 0.7, 2);
-    const roofMaterial = new THREE.MeshStandardMaterial({ color: 0xAA0000 });
+    const roofMaterial = new THREE.MeshLambertMaterial({ color: 0xAA0000 });
     const carRoof = new THREE.Mesh(roofGeometry, roofMaterial);
     carRoof.position.set(0, 1.35, -0.5);
     this.mesh.add(carRoof);
     
-    // Front lights
+    // Front lights - Using MeshBasicMaterial for headlights (no fancy lighting)
     const lightGeometry = new THREE.BoxGeometry(0.5, 0.3, 0.1);
-    const lightMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0xFFFF00,
-      emissive: 0xFFFF00,
-      emissiveIntensity: 0.5
-    });
+    const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
     
     const leftLight = new THREE.Mesh(lightGeometry, lightMaterial);
     leftLight.position.set(-0.7, 0.5, 2);
@@ -72,9 +68,9 @@ export class Car {
     rightLight.position.set(0.7, 0.5, 2);
     this.mesh.add(rightLight);
     
-    // Wheels
-    const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
-    const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x111111 });
+    // Wheels - Using lower segment count for cylinders
+    const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8); // Reduced segments
+    const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 });
     
     const wheelPositions = [
       { x: -1.1, y: 0, z: 1.2, name: 'frontLeft' },
@@ -95,12 +91,13 @@ export class Car {
     // Position car at origin
     this.mesh.position.copy(this.position);
     
-    // Set up shadows
-    this.mesh.traverse(object => {
-      if (object instanceof THREE.Mesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
+    // Set up shadows - only enable shadow casting for the main body parts
+    carBody.castShadow = true;
+    carRoof.castShadow = true;
+    
+    // Set receiveShadow only on the wheels
+    this.wheels.forEach(wheel => {
+      wheel.castShadow = true;
     });
   }
 
@@ -129,27 +126,25 @@ export class Car {
       // Accelerate backward
       this.speed -= scaledAcceleration;
     } else {
-      // Natural deceleration when no key is pressed
+      // Decelerate when no input
       if (this.speed > 0) {
         this.speed -= scaledDeceleration;
+        if (this.speed < 0) this.speed = 0;
       } else if (this.speed < 0) {
         this.speed += scaledDeceleration;
-      }
-      
-      // Prevent small floating-point speeds
-      if (Math.abs(this.speed) < scaledDeceleration) {
-        this.speed = 0;
+        if (this.speed > 0) this.speed = 0;
       }
     }
     
-    // Clamp speed to current maximum (which may be affected by slow effects)
-    this.speed = Math.max(-this.currentMaxSpeed / 2, Math.min(this.currentMaxSpeed, this.speed));
+    // Cap speed at current max
+    if (this.speed > this.currentMaxSpeed) this.speed = this.currentMaxSpeed;
+    if (this.speed < -this.currentMaxSpeed / 2) this.speed = -this.currentMaxSpeed / 2;
     
-    // Scale turn speed by delta time
-    const scaledTurnSpeed = this.turnSpeed * (deltaTime * 60);
-    
-    // Apply turning based on input and current speed
     if (Math.abs(this.speed) > 0.01) {
+      // Scale turning speed with car speed for better handling
+      const speedFactor = Math.abs(this.speed) / this.maxSpeed;
+      const scaledTurnSpeed = this.turnSpeed * speedFactor * (deltaTime * 60);
+      
       // Only allow turning when the car is moving
       this.rotation += turnInput * scaledTurnSpeed * (this.speed > 0 ? 1 : -1);
       
@@ -157,14 +152,14 @@ export class Car {
       this.direction.x = Math.sin(this.rotation);
       this.direction.z = Math.cos(this.rotation);
       
-      // Turn front wheels for visual effect
+      // Turn front wheels for visual effect - simpler version
       this.wheels.forEach(wheel => {
         if (wheel.name.startsWith('front')) {
           wheel.rotation.y = turnInput * Math.PI / 8;
         }
       });
       
-      // Animate wheel rotation - scale by delta time
+      // Animate wheel rotation - simplified, less frequent updates
       const wheelRotationSpeed = this.speed * 0.5 * (deltaTime * 60);
       this.wheels.forEach(wheel => {
         wheel.rotation.x += wheelRotationSpeed;
@@ -217,34 +212,16 @@ export class Car {
       // Reset to normal max speed
       this.currentMaxSpeed = this.maxSpeed;
       this.slowEffectEndTime = 0;
-      
-      // Clear any visual effects on the car
-      this.mesh.traverse(object => {
-        if (object instanceof THREE.Mesh && 
-            object.material instanceof THREE.MeshStandardMaterial) {
-          object.material.emissive = new THREE.Color(0x000000);
-        }
-      });
     }
   }
   
-  // Method to apply a slow effect to the car
+  // Method to apply a slow effect to the car - simplified
   public applySlowEffect(speedFactor: number, duration: number = 1000): void {
     // Apply speed reduction factor (0.7 means 70% of normal speed)
     this.currentMaxSpeed = this.maxSpeed * speedFactor;
     
     // Set when the effect will end
     this.slowEffectEndTime = Date.now() + duration;
-    
-    // Add a visual effect to show the car is slowed
-    this.mesh.traverse(object => {
-      if (object instanceof THREE.Mesh && 
-          object.material instanceof THREE.MeshStandardMaterial) {
-        // Add a slight red glow to indicate the car is slowed
-        object.material.emissive = new THREE.Color(0x330000);
-        object.material.emissiveIntensity = 0.3;
-      }
-    });
   }
   
   public getPosition(): THREE.Vector3 {
@@ -282,26 +259,10 @@ export class Car {
     this.speed = 0;
   }
   
-  // Add takeDamage method to handle damage from hazards
+  // Add takeDamage method to handle damage from hazards - simplified
   public takeDamage(amount: number, sourcePosition: THREE.Vector3): void {
     this.health -= amount;
-    
-    // Apply a knockback effect based on the source position
-    const knockbackDirection = new THREE.Vector3()
-      .subVectors(this.position, sourcePosition)
-      .normalize();
-    
-    // Add some upward component to make it more dramatic
-    knockbackDirection.y = 0.5;
-    
-    // Apply an impulse to the car's speed in the knockback direction
-    this.speed -= 0.2; // Slow down the car when hit
-    
-    if (this.health <= 0) {
-      // Car is destroyed
-      this.health = 0;
-      this.stop();
-    }
+    if (this.health < 0) this.health = 0;
   }
 
   // Add getter for health
@@ -325,20 +286,6 @@ export class Car {
     this.health = 100; // Reset health
     this.mesh.position.copy(this.position);
     this.mesh.rotation.y = this.rotation;
-    
-    // Reset any visual effects
-    this.mesh.traverse(object => {
-      if (object instanceof THREE.Mesh && 
-          object.material instanceof THREE.MeshStandardMaterial) {
-        object.material.emissive = new THREE.Color(0x000000);
-        
-        // Reset emissive for headlights - special case
-        if (object.position.z > 1.5 && object.position.y < 1) {
-          object.material.emissive = new THREE.Color(0xFFFF00);
-          object.material.emissiveIntensity = 0.5;
-        }
-      }
-    });
   }
   
   public getCollider(): THREE.Box3 {

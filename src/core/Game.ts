@@ -1,9 +1,9 @@
-// Game.ts - Main game class that coordinates everything
+// Game.ts - Main game controller
 import * as THREE from 'three';
-import { Car } from '../entities/Car';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { World } from '../world/World';
+import { Car } from '../entities/Car';
 import { InputManager } from '../utils/InputManager';
-import Stats from 'stats.js';
 
 export class Game {
   private scene: THREE.Scene;
@@ -33,22 +33,22 @@ export class Game {
       75, 
       window.innerWidth / window.innerHeight, 
       0.1,
-      3000 // Increased far clipping plane to accommodate the skybox
+      1000 // Reduced far clipping plane for better performance
     );
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);
     
-    // Set up renderer with improved visual quality and performance optimizations
+    // Set up renderer with improved performance optimizations
     this.renderer = new THREE.WebGLRenderer({ 
-      antialias: window.devicePixelRatio < 2, // Only use antialiasing on low-DPI devices
+      antialias: false, // Disable antialiasing for performance
       powerPreference: 'high-performance',
       precision: 'mediump' // Medium precision for better performance
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
+    this.renderer.setPixelRatio(1); // Force pixel ratio of 1 for better performance
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFShadowMap; // Better performance than PCFSoftShadowMap
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace; // Modern replacement for outputEncoding
+    this.renderer.shadowMap.type = THREE.BasicShadowMap; // Fastest shadow map algorithm
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.autoClear = false; // For manual clearing - better performance
     document.body.appendChild(this.renderer.domElement);
@@ -74,16 +74,16 @@ export class Game {
     // Create car
     this.car = new Car(this.scene, this.inputManager);
     
-    // Move car to a spawn point
+    // Set initial car position to a spawn point
     const spawnPoint = this.world.getRandomSpawnPoint();
     this.car.setPosition(spawnPoint);
     
-    // Update instructions for mobile
+    // Detect if we're on mobile and update instructions
     if (this.isMobile) {
       this.updateMobileInstructions();
     }
     
-    // Start game loop with initial timestamp
+    // Start game loop
     this.lastFrameTime = performance.now();
     this.animate();
   }
@@ -137,7 +137,7 @@ export class Game {
       carPosition.z + carDirection.z * 10
     );
   }
-  
+
   private checkCollisions(): void {
     if (this.gameOver) return;
     
@@ -166,79 +166,43 @@ export class Game {
   }
   
   private updateScoreDisplay(): void {
-    let scoreElement = document.getElementById('score');
-    
-    if (!scoreElement) {
-      scoreElement = document.createElement('div');
-      scoreElement.id = 'score';
-      scoreElement.style.position = 'absolute';
-      scoreElement.style.top = '20px';
-      scoreElement.style.left = '20px';
-      scoreElement.style.color = 'white';
-      scoreElement.style.fontSize = '24px';
-      scoreElement.style.fontFamily = 'Arial, sans-serif';
-      scoreElement.style.zIndex = '100';
-      document.body.appendChild(scoreElement);
+    const scoreElement = document.getElementById('score');
+    if (scoreElement) {
+      scoreElement.textContent = `Score: ${this.score}`;
     }
-    
-    scoreElement.textContent = `Score: ${this.score}`;
   }
   
   private endGame(): void {
     this.gameOver = true;
     this.car.stop();
+    
+    // Show game over message
     this.showGameOverMessage();
   }
   
   private showGameOverMessage(): void {
-    let gameOverElement = document.createElement('div');
+    const gameOverElement = document.createElement('div');
     gameOverElement.id = 'gameOver';
     gameOverElement.style.position = 'absolute';
     gameOverElement.style.top = '50%';
     gameOverElement.style.left = '50%';
     gameOverElement.style.transform = 'translate(-50%, -50%)';
     gameOverElement.style.color = 'white';
-    gameOverElement.style.fontSize = '36px';
+    gameOverElement.style.fontSize = '32px';
     gameOverElement.style.fontFamily = 'Arial, sans-serif';
     gameOverElement.style.textAlign = 'center';
     gameOverElement.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
     gameOverElement.style.padding = '20px';
     gameOverElement.style.borderRadius = '10px';
-    gameOverElement.style.zIndex = '999';
-
-    if (this.isMobile) {
-      gameOverElement.innerHTML = `
-        <h1>Game Over</h1>
-        <p>Your score: ${this.score}</p>
-        <div id="restart-button" style="
-          background-color: #4CAF50;
-          border: none;
-          color: white;
-          padding: 15px 32px;
-          text-align: center;
-          text-decoration: none;
-          display: inline-block;
-          font-size: 16px;
-          margin: 4px 2px;
-          cursor: pointer;
-          border-radius: 5px;
-        ">Restart Game</div>
-      `;
-      document.body.appendChild(gameOverElement);
-      
-      // Add touch event listener to restart button
-      const restartButton = document.getElementById('restart-button');
-      if (restartButton) {
-        restartButton.addEventListener('touchstart', () => this.restartGame());
-      }
-    } else {
-      gameOverElement.innerHTML = `
-        <h1>Game Over</h1>
-        <p>Your score: ${this.score}</p>
-        <p>Press 'R' to restart</p>
-      `;
-      document.body.appendChild(gameOverElement);
-    }
+    gameOverElement.style.zIndex = '101';
+    
+    gameOverElement.innerHTML = `
+      <h1>Game Over</h1>
+      <p>Your Score: ${this.score}</p>
+      <p>Press R to restart</p>
+    `;
+    
+    document.body.appendChild(gameOverElement);
   }
   
   private restartGame(): void {
@@ -290,28 +254,29 @@ export class Game {
     // Accumulate time since last frame
     this.accumulator += frameTime;
     
-    // Fixed timestep updates
-    while (this.accumulator >= this.fixedTimeStep && !this.gameOver) {
+    // Fixed timestep updates - limit physics steps for better performance
+    const maxSteps = this.maxSubSteps;
+    let steps = 0;
+    
+    while (this.accumulator >= this.fixedTimeStep && !this.gameOver && steps < maxSteps) {
       // Physics and gameplay updates at fixed intervals
       this.car.update(this.fixedTimeStep);
       this.updateCarTerrainHeight();
       this.world.update(this.fixedTimeStep);
       
       this.accumulator -= this.fixedTimeStep;
-      
-      // Limit physics steps per frame to prevent spiral of death
-      if (this.maxSubSteps-- <= 0) {
-        this.accumulator = 0;
-        break;
-      }
+      steps++;
     }
     
-    // Reset sub-steps counter
-    this.maxSubSteps = 3;
+    // If we're still behind and hit our max steps, discard remaining time
+    // to prevent spiral of death
+    if (steps >= maxSteps && this.accumulator > this.fixedTimeStep) {
+      this.accumulator = 0;
+    }
     
     // Non-physics updates (can run at variable framerate)
     if (!this.gameOver) {
-      // Update skybox position to follow player
+      // Update skybox position to follow player but skip other updates
       this.world.updatePlayerPosition(this.car.getPosition());
       
       // Update camera position
