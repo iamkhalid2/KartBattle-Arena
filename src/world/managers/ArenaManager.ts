@@ -305,7 +305,8 @@ export class ArenaManager {
       { x: 30, z: 0, type: 'barrier' }
     ];
     
-    hazardPositions.forEach((pos, index) => {
+    // Using index in the forEach callback as it's required in the update method
+    hazardPositions.forEach((pos) => {
       let hazardMesh;
       let glowMesh; // For optional glow effect
       
@@ -403,6 +404,13 @@ export class ArenaManager {
       if (hazardMesh) {
         hazardMesh.castShadow = true;
         hazardMesh.name = pos.type;
+        
+        // Store the position index as a property for use in the update method
+        hazardMesh.userData = {
+          ...hazardMesh.userData,
+          positionIndex: hazardPositions.indexOf(pos) // Store index for use in update
+        };
+        
         this.scene.add(hazardMesh);
         this.hazardObjects.push(hazardMesh);
         
@@ -420,9 +428,12 @@ export class ArenaManager {
     this.time += deltaTime;
     
     // Update hazard objects with more interesting effects
-    this.hazardObjects.forEach((hazard, index) => {
+    this.hazardObjects.forEach((hazard) => {
       if (hazard instanceof THREE.Mesh) {
         if (hazard.name === 'cylinder') {
+          // Get the index from userData for animation offset
+          const index = hazard.userData?.positionIndex || 0;
+          
           // Floating animation
           hazard.position.y = 1.5 + Math.sin(this.time * 2 + index) * 0.2;
           
