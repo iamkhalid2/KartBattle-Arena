@@ -33,7 +33,7 @@ export class Game {
       75, 
       window.innerWidth / window.innerHeight, 
       0.1,
-      5000 // Increased far clipping plane to see the entire skybox
+      4000 // Increased far clipping plane to see the entire skybox
     );
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);
