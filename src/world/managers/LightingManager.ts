@@ -43,20 +43,22 @@ export class LightingManager {
     directionalLight.position.set(100, 200, 100);
     directionalLight.castShadow = true;
     
-    // Reduced shadow resolution for better performance
+    // Enhanced shadow resolution while maintaining performance
     directionalLight.shadow.mapSize.width = 1024;
     directionalLight.shadow.mapSize.height = 1024;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 500;
+    
+    // More precise shadow framing for sharper shadows
     directionalLight.shadow.camera.left = -this.arenaSize/1.5;
     directionalLight.shadow.camera.right = this.arenaSize/1.5;
     directionalLight.shadow.camera.top = this.arenaSize/1.5;
     directionalLight.shadow.camera.bottom = -this.arenaSize/1.5;
     
-    // Softer shadows that look better but still perform well
-    directionalLight.shadow.bias = -0.0005;
-    directionalLight.shadow.normalBias = 0.05;
-    directionalLight.shadow.radius = 2; // Slightly increased for softer edges
+    // Sharper shadows by adjusting these parameters
+    directionalLight.shadow.bias = -0.0003; // Reduced bias for sharper edges
+    directionalLight.shadow.normalBias = 0.02; // Reduced for sharper shadows
+    directionalLight.shadow.radius = 1; // Reduced for sharper edges
     
     this.scene.add(directionalLight);
     this.lights.push(directionalLight);

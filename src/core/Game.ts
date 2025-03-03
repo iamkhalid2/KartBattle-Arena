@@ -47,7 +47,7 @@ export class Game {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(1); // Force pixel ratio of 1 for better performance
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.BasicShadowMap; // Fastest shadow map algorithm
+    this.renderer.shadowMap.type = THREE.PCFShadowMap; // Better shadows without much performance cost
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.autoClear = false; // For manual clearing - better performance

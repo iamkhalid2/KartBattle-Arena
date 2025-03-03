@@ -41,8 +41,8 @@ export class World {
 
   private initializeWorld(): void {
     // Setup the world using our specialized managers in proper order
-    // Sky first (background)
-    this.skyboxManager;  // The skybox is created in constructor
+    // Sky first (background) - FIX: The skybox was already created in the constructor but we need to ensure it's visible
+    // No need for an explicit method call as the skybox is created automatically in the SkyboxManager constructor
     
     // Then terrain (ground outside arena)
     this.terrainManager.createGround();
