@@ -28,12 +28,12 @@ export class Game {
     // Set up scene
     this.scene = new THREE.Scene();
     
-    // Set up camera
+    // Set up camera with increased far plane to see the entire skybox
     this.camera = new THREE.PerspectiveCamera(
       75, 
       window.innerWidth / window.innerHeight, 
       0.1,
-      1000 // Reduced far clipping plane for better performance
+      5000 // Increased far clipping plane to see the entire skybox
     );
     this.camera.position.set(0, 5, -10);
     this.camera.lookAt(0, 0, 10);

@@ -25,9 +25,9 @@ export class SkyboxManager {
   }
 
   private createGradientSkybox(): THREE.Mesh {
-    // Create a full sphere instead of a dome for better coverage
-    const size = 2000;
-    const skyGeometry = new THREE.SphereGeometry(size, 32, 32); // Use full sphere with higher detail
+    // Create a larger sphere for the sky to ensure it's always visible
+    const size = 2800; // Increased size to match camera far plane
+    const skyGeometry = new THREE.SphereGeometry(size, 32, 32); // Full sphere with higher detail
     
     // Create vertex colors for a vibrant blue gradient
     const colors = [
@@ -45,23 +45,25 @@ export class SkyboxManager {
     
     // Apply gradient colors based on y-position
     for (let i = 0; i < count; i++) {
-      const y = positionAttribute.getY(i) / size; // Normalize to -1 to 1 range
+      const position = new THREE.Vector3();
+      position.fromBufferAttribute(positionAttribute, i);
+      position.normalize(); // Convert to unit vector to get consistent gradient
       
-      // Calculate color based on absolute height value (0 to 1)
-      let absY = Math.abs(y);
       let finalColor = new THREE.Color();
+      const y = position.y; // Will be in range -1 to 1
       
-      if (y > 0.3) {
+      // More gradual color transitions
+      if (y > 0.2) {
         // Top part - deep to mid blue
-        const t = (y - 0.3) / 0.7; // Normalize 0.3-1.0 to 0-1
+        const t = (y - 0.2) / 0.8; // Normalize 0.2-1.0 to 0-1
         finalColor.lerpColors(colors[1], colors[0], t);
-      } else if (y > -0.3) {
+      } else if (y > -0.4) {
         // Middle part - mid blue to light blue
-        const t = (y + 0.3) / 0.6; // Normalize -0.3-0.3 to 0-1
+        const t = (y + 0.4) / 0.6; // Normalize -0.4-0.2 to 0-1
         finalColor.lerpColors(colors[2], colors[1], t);
       } else {
         // Bottom part - light blue to pale blue
-        const t = (y + 1) / 0.7; // Normalize -1.0--0.3 to 0-1
+        const t = (y + 1) / 0.6; // Normalize -1.0--0.4 to 0-1
         finalColor.lerpColors(colors[3], colors[2], t);
       }
       
@@ -83,8 +85,11 @@ export class SkyboxManager {
     // Create mesh and add to scene
     const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
     
-    // Ensure the skybox is rendered by giving it a very high rendering order
-    skyDome.renderOrder = -1000; // Very early in the rendering queue
+    // Ensure the skybox is rendered first
+    skyDome.renderOrder = -1000;
+    
+    // Position the skybox so it's centered on the scene
+    skyDome.position.y = 0;
     
     this.scene.add(skyDome);
     
