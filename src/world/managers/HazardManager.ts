@@ -39,6 +39,7 @@ export class HazardManager {
       lavaMesh.rotation.x = -Math.PI / 2;
       lavaMesh.position.copy(pos);
       lavaMesh.userData = {
+        isHazard: true, // Add this flag for collision detection
         type: 'hazard',
         hazardType: 'lava',
         damage: 5,  // Reduced from 10 to 5
@@ -84,6 +85,7 @@ export class HazardManager {
     
     // Add spike trap data
     base.userData = {
+      isHazard: true, // Add this flag for collision detection
       type: 'hazard',
       hazardType: 'spikes',
       damage: 15,
@@ -108,6 +110,7 @@ export class HazardManager {
     const crusher = new THREE.Mesh(crushGeometry, crushMaterial);
     crusher.position.set(0, 10, -40);
     crusher.userData = {
+      isHazard: true, // Add this flag for collision detection
       type: 'hazard',
       hazardType: 'crusher',
       damage: 50,
@@ -188,30 +191,31 @@ export class HazardManager {
     }
   }
   
-  public checkCollisions(collider: THREE.Box3, car: Car): void {
-    // Check collisions with hazards
-    this.hazards.forEach(hazard => {
-      const hazardBox = new THREE.Box3().setFromObject(hazard);
-      
-      if (collider.intersectsBox(hazardBox)) {
-        // Only deal damage if the hazard is active (for spikes) or for other hazards
-        let dealDamage = true;
+  public checkCollisions(carCollider: THREE.Box3, car: Car): boolean {
+    let collided = false;
+    
+    this.hazards.forEach((hazard) => {
+      if (hazard.userData && hazard.userData.isHazard) {
+        const hazardBox = new THREE.Box3().setFromObject(hazard);
         
-        if (hazard.userData.hazardType === 'spikes' && !hazard.userData.active) {
-          dealDamage = false;
-        }
-        
-        if (dealDamage) {
-          // Apply damage to the car using the proper method
-          car.takeDamage(hazard.userData.damage, hazard.position);
+        if (carCollider.intersectsBox(hazardBox)) {
+          collided = true;
           
-          // If it's a lava hazard, also slow down the car
-          if (hazard.userData.hazardType === 'lava') {
-            car.applySlowEffect(0.7); // Apply a 30% slowdown effect
+          // Check for damage dealing (don't apply damage if no damage value set)
+          if (hazard.userData.damage && hazard.userData.damage > 0) {
+            // Update to call takeDamage with only the damage amount
+            car.takeDamage(hazard.userData.damage);
+          }
+          
+          // Apply slow effect if the hazard slows
+          if (hazard.userData.slowFactor && hazard.userData.slowFactor < 1.0) {
+            car.applySlowEffect(hazard.userData.slowFactor, hazard.userData.slowDuration || 1000);
           }
         }
       }
     });
+    
+    return collided;
   }
   
   public getEntitiesForMinimap(): any[] {

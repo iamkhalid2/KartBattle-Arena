@@ -91,8 +91,8 @@ export class ArenaManager {
     
     // Create floor material with vertex colors
     const floorMaterial = new THREE.MeshLambertMaterial({
-      vertexColors: true,
-      shininess: 0 // No specularity for better performance
+      vertexColors: true
+      // Removed shininess property as MeshLambertMaterial doesn't support it
     });
     
     this.arenaFloor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -123,7 +123,7 @@ export class ArenaManager {
     ];
     
     // Create and add the walls with stripes
-    wallPositions.forEach((wall, index) => {
+    wallPositions.forEach((wall) => {
       // Create wall geometry with more segments for better detail
       const wallGeometry = new THREE.BoxGeometry(
         wall.size.x, 
@@ -235,7 +235,7 @@ export class ArenaManager {
       new THREE.Vector3(halfSize, 0, halfSize)
     ];
     
-    cornerPositions.forEach((pos, index) => {
+    cornerPositions.forEach((pos) => {
       // Create base cylinder
       const base = new THREE.Mesh(baseGeometry, cornerMaterial);
       base.position.copy(pos);
