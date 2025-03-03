@@ -42,51 +42,70 @@ export class Car {
   }
 
   private createCarModel(): void {
-    // Car body - Using simpler MeshLambertMaterial instead of MeshStandardMaterial
-    const bodyGeometry = new THREE.BoxGeometry(2, 1, 4);
-    const bodyMaterial = new THREE.MeshLambertMaterial({ color: 0xFF0000 });
+    // Create more visually appealing car with vertex colors and details
+    
+    // Car body - with a sleeker design
+    const bodyGeometry = new THREE.BoxGeometry(2, 0.8, 4);
+    // Add slight gradient to the car body
+    const bodyColors = new Float32Array(bodyGeometry.attributes.position.count * 3);
+    const positions = bodyGeometry.attributes.position.array;
+    
+    for (let i = 0; i < bodyGeometry.attributes.position.count; i++) {
+      const i3 = i * 3;
+      const z = positions[i3 + 2]; // Use z-position for gradient
+      const y = positions[i3 + 1]; // Use y-position for top/bottom distinction
+      
+      // Create a subtle gradient from front to back
+      const baseColor = new THREE.Color(0xdd0000); // Base red color
+      let color;
+      
+      // Car top is slightly darker
+      if (y > 0.3) {
+        color = new THREE.Color(0x990000);
+      } else {
+        // Add gradient from front to back
+        const t = (z + 2) / 4; // Normalize z to 0-1
+        color = baseColor.clone().multiplyScalar(1.0 - t * 0.2);
+      }
+      
+      bodyColors[i3] = color.r;
+      bodyColors[i3 + 1] = color.g;
+      bodyColors[i3 + 2] = color.b;
+    }
+    
+    bodyGeometry.setAttribute('color', new THREE.BufferAttribute(bodyColors, 3));
+    const bodyMaterial = new THREE.MeshLambertMaterial({ 
+      vertexColors: true,
+    });
     const carBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
     carBody.position.y = 0.5;
     this.mesh.add(carBody);
     
-    // Car roof
-    const roofGeometry = new THREE.BoxGeometry(1.5, 0.7, 2);
-    const roofMaterial = new THREE.MeshLambertMaterial({ color: 0xAA0000 });
+    // Car roof with aerodynamic slope
+    const roofGeometry = new THREE.BoxGeometry(1.5, 0.5, 2);
+    // Manipulate vertices to create a sloped roof
+    const roofPositions = roofGeometry.attributes.position.array;
+    for (let i = 0; i < roofGeometry.attributes.position.count; i++) {
+      const i3 = i * 3;
+      const z = roofPositions[i3 + 2];
+      // If this is a vertex at the front of the roof, raise it
+      if (z > 0) {
+        roofPositions[i3 + 1] -= 0.25; // Lower front for aerodynamic look
+      }
+    }
+    roofGeometry.attributes.position.needsUpdate = true;
+    roofGeometry.computeVertexNormals(); // Recalculate normals
+    
+    const roofMaterial = new THREE.MeshLambertMaterial({ color: 0x990000 });
     const carRoof = new THREE.Mesh(roofGeometry, roofMaterial);
-    carRoof.position.set(0, 1.35, -0.5);
+    carRoof.position.set(0, 1.25, -0.7);
     this.mesh.add(carRoof);
     
-    // Front lights - Using MeshBasicMaterial for headlights (no fancy lighting)
-    const lightGeometry = new THREE.BoxGeometry(0.5, 0.3, 0.1);
-    const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
+    // Add vehicle details
+    this.addVehicleDetails();
     
-    const leftLight = new THREE.Mesh(lightGeometry, lightMaterial);
-    leftLight.position.set(-0.7, 0.5, 2);
-    this.mesh.add(leftLight);
-    
-    const rightLight = new THREE.Mesh(lightGeometry, lightMaterial);
-    rightLight.position.set(0.7, 0.5, 2);
-    this.mesh.add(rightLight);
-    
-    // Wheels - Using lower segment count for cylinders
-    const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8); // Reduced segments
-    const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 });
-    
-    const wheelPositions = [
-      { x: -1.1, y: 0, z: 1.2, name: 'frontLeft' },
-      { x: 1.1, y: 0, z: 1.2, name: 'frontRight' },
-      { x: -1.1, y: 0, z: -1.2, name: 'rearLeft' },
-      { x: 1.1, y: 0, z: -1.2, name: 'rearRight' }
-    ];
-    
-    wheelPositions.forEach(pos => {
-      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos.x, pos.y, pos.z);
-      wheel.name = pos.name;
-      this.mesh.add(wheel);
-      this.wheels.push(wheel);
-    });
+    // Wheels with better tread detail
+    this.createWheels();
     
     // Position car at origin
     this.mesh.position.copy(this.position);
@@ -94,10 +113,153 @@ export class Car {
     // Set up shadows - only enable shadow casting for the main body parts
     carBody.castShadow = true;
     carRoof.castShadow = true;
+  }
+  
+  private addVehicleDetails(): void {
+    // Add windows with a shiny glass appearance
+    const windshieldGeometry = new THREE.PlaneGeometry(1.4, 0.7);
+    const windowMaterial = new THREE.MeshBasicMaterial({
+      color: 0x88ccff,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide
+    });
     
-    // Set receiveShadow only on the wheels
-    this.wheels.forEach(wheel => {
+    // Windshield
+    const windshield = new THREE.Mesh(windshieldGeometry, windowMaterial);
+    windshield.position.set(0, 1.15, 0.3);
+    windshield.rotation.x = Math.PI / 2.5;
+    this.mesh.add(windshield);
+    
+    // Side windows
+    const sideWindowGeometry = new THREE.PlaneGeometry(2, 0.5);
+    const leftWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+    leftWindow.position.set(-1.01, 1, -0.7);
+    leftWindow.rotation.y = Math.PI / 2;
+    this.mesh.add(leftWindow);
+    
+    const rightWindow = new THREE.Mesh(sideWindowGeometry, windowMaterial);
+    rightWindow.position.set(1.01, 1, -0.7);
+    rightWindow.rotation.y = -Math.PI / 2;
+    this.mesh.add(rightWindow);
+    
+    // Add bumper with different color
+    const bumperGeometry = new THREE.BoxGeometry(1.9, 0.4, 0.5);
+    const bumperMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    const frontBumper = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    frontBumper.position.set(0, 0.3, 1.8);
+    this.mesh.add(frontBumper);
+    
+    const backBumper = new THREE.Mesh(bumperGeometry, bumperMaterial);
+    backBumper.position.set(0, 0.3, -1.8);
+    this.mesh.add(backBumper);
+    
+    // Front lights - with actual light sources for better visuals
+    this.createHeadlights();
+    
+    // Add spoiler
+    const spoilerLegGeometry = new THREE.BoxGeometry(0.1, 0.3, 0.1);
+    const spoilerMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    
+    const leftLeg = new THREE.Mesh(spoilerLegGeometry, spoilerMaterial);
+    leftLeg.position.set(-0.6, 0.8, -1.8);
+    this.mesh.add(leftLeg);
+    
+    const rightLeg = new THREE.Mesh(spoilerLegGeometry, spoilerMaterial);
+    rightLeg.position.set(0.6, 0.8, -1.8);
+    this.mesh.add(rightLeg);
+    
+    const spoilerWingGeometry = new THREE.BoxGeometry(1.5, 0.1, 0.4);
+    const spoilerWing = new THREE.Mesh(spoilerWingGeometry, spoilerMaterial);
+    spoilerWing.position.set(0, 1, -1.8);
+    this.mesh.add(spoilerWing);
+  }
+  
+  private createHeadlights(): void {
+    // Create better looking headlights
+    const lightGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.05, 8);
+    lightGeometry.rotateX(Math.PI / 2);
+    
+    // Headlight texture material
+    const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xffffee });
+    
+    // Left headlight
+    const leftLight = new THREE.Mesh(lightGeometry, lightMaterial);
+    leftLight.position.set(-0.7, 0.5, 2);
+    this.mesh.add(leftLight);
+    
+    // Right headlight
+    const rightLight = new THREE.Mesh(lightGeometry, lightMaterial);
+    rightLight.position.set(0.7, 0.5, 2);
+    this.mesh.add(rightLight);
+    
+    // Add glow to headlights for more visual interest
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: 0xffffaa,
+      transparent: true,
+      opacity: 0.5,
+      blending: THREE.AdditiveBlending
+    });
+    
+    const leftGlow = new THREE.Mesh(lightGeometry.clone().scale(1.2, 1, 2), glowMaterial);
+    leftGlow.position.copy(leftLight.position);
+    leftGlow.position.z += 0.2; // Extend slightly forward
+    this.mesh.add(leftGlow);
+    
+    const rightGlow = new THREE.Mesh(lightGeometry.clone().scale(1.2, 1, 2), glowMaterial);
+    rightGlow.position.copy(rightLight.position);
+    rightGlow.position.z += 0.2; // Extend slightly forward
+    this.mesh.add(rightGlow);
+    
+    // Add tail lights
+    const tailLightGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 8);
+    tailLightGeometry.rotateX(Math.PI / 2);
+    const tailLightMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    
+    // Left tail light
+    const leftTail = new THREE.Mesh(tailLightGeometry, tailLightMaterial);
+    leftTail.position.set(-0.7, 0.5, -2);
+    leftTail.rotation.x = Math.PI;
+    this.mesh.add(leftTail);
+    
+    // Right tail light
+    const rightTail = new THREE.Mesh(tailLightGeometry, tailLightMaterial);
+    rightTail.position.set(0.7, 0.5, -2);
+    rightTail.rotation.x = Math.PI;
+    this.mesh.add(rightTail);
+  }
+  
+  private createWheels(): void {
+    // Improved wheels with tread patterns
+    const wheelGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 16);
+    
+    // Create a more interesting wheel with treads
+    const wheelMaterial = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    
+    const wheelPositions = [
+      { x: -1, y: 0, z: 1.2, name: 'frontLeft', steer: true },
+      { x: 1, y: 0, z: 1.2, name: 'frontRight', steer: true },
+      { x: -1, y: 0, z: -1.2, name: 'rearLeft', steer: false },
+      { x: 1, y: 0, z: -1.2, name: 'rearRight', steer: false }
+    ];
+    
+    wheelPositions.forEach(pos => {
+      // Create wheel
+      const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(pos.x, pos.y, pos.z);
+      wheel.name = pos.name;
       wheel.castShadow = true;
+      
+      // Add wheel rim
+      const rimGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.41, 8);
+      rimGeometry.rotateZ(Math.PI / 2);
+      const rimMaterial = new THREE.MeshLambertMaterial({ color: 0xaaaaaa });
+      const rim = new THREE.Mesh(rimGeometry, rimMaterial);
+      wheel.add(rim);
+      
+      this.mesh.add(wheel);
+      this.wheels.push(wheel);
     });
   }
 
@@ -160,9 +322,13 @@ export class Car {
       });
       
       // Animate wheel rotation - simplified, less frequent updates
-      const wheelRotationSpeed = this.speed * 0.5 * (deltaTime * 60);
+      const wheelRotationSpeed = this.speed * 0.8 * (deltaTime * 60);
       this.wheels.forEach(wheel => {
         wheel.rotation.x += wheelRotationSpeed;
+        
+        if (wheel.name.startsWith('front')) {
+          wheel.rotation.y = turnInput * Math.PI / 6;
+        }
       });
     }
     
