@@ -47,7 +47,6 @@ export class World {
     // Then terrain (ground outside arena)
     this.terrainManager.createGround();
     this.terrainManager.generateRoads(0, 0, this.arenaSize);
-    this.terrainManager.addTerrainDecorations();
     
     // Add lighting
     this.lightingManager.createLights();

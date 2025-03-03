@@ -4,7 +4,6 @@ export class LightingManager {
   private scene: THREE.Scene;
   private arenaSize: number;
   private lights: THREE.Light[] = [];
-  private dynamicLights: THREE.Light[] = [];
   private time: number = 0;
   
   constructor(scene: THREE.Scene, arenaSize: number) {
@@ -15,27 +14,38 @@ export class LightingManager {
   public createLights(): void {
     this.createAmbientLight();
     this.createDirectionalLight();
-    // Removed spotlights for better performance
-    // Removed rim lights for better performance
-    // Removed floor lights for better performance
+    // Add a subtle hemisphere light for better ambient lighting
+    this.createHemisphereLight();
   }
   
   private createAmbientLight(): void {
     // Main ambient light - slightly blue-tinted for cooler atmosphere
-    const ambientLight = new THREE.AmbientLight(0xc4d7ff, 0.7); // Increased intensity to compensate for removed lights
+    const ambientLight = new THREE.AmbientLight(0xc4d7ff, 0.4); // Reduced intensity to work with hemisphere light
     this.scene.add(ambientLight);
     this.lights.push(ambientLight);
   }
   
+  private createHemisphereLight(): void {
+    // Add hemisphere light for more natural ambient lighting (sky/ground)
+    // This is very efficient and adds a lot of depth
+    const hemiLight = new THREE.HemisphereLight(
+      0x8fbeff, // Sky color - light blue
+      0x063e20, // Ground color - dark green
+      0.5 // Intensity
+    );
+    this.scene.add(hemiLight);
+    this.lights.push(hemiLight);
+  }
+  
   private createDirectionalLight(): void {
     // Main directional light (sun) with warmer tone
-    const directionalLight = new THREE.DirectionalLight(0xffedcc, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffebc4, 0.9); // Warmer sunlight color
     directionalLight.position.set(100, 200, 100);
     directionalLight.castShadow = true;
     
     // Reduced shadow resolution for better performance
-    directionalLight.shadow.mapSize.width = 1024; // Reduced from 2048
-    directionalLight.shadow.mapSize.height = 1024; // Reduced from 2048
+    directionalLight.shadow.mapSize.width = 1024;
+    directionalLight.shadow.mapSize.height = 1024;
     directionalLight.shadow.camera.near = 0.5;
     directionalLight.shadow.camera.far = 500;
     directionalLight.shadow.camera.left = -this.arenaSize/1.5;
@@ -43,17 +53,17 @@ export class LightingManager {
     directionalLight.shadow.camera.top = this.arenaSize/1.5;
     directionalLight.shadow.camera.bottom = -this.arenaSize/1.5;
     
-    // Basic shadow settings
+    // Softer shadows that look better but still perform well
     directionalLight.shadow.bias = -0.0005;
-    directionalLight.shadow.normalBias = 0.02;
-    directionalLight.shadow.radius = 1.5;
+    directionalLight.shadow.normalBias = 0.05;
+    directionalLight.shadow.radius = 2; // Slightly increased for softer edges
     
     this.scene.add(directionalLight);
     this.lights.push(directionalLight);
     
     // Add a secondary fill light from the opposite direction with blue tone
     // for more depth and contrast - no shadows for better performance
-    const fillLight = new THREE.DirectionalLight(0x7080ff, 0.3);
+    const fillLight = new THREE.DirectionalLight(0x7080ff, 0.4);
     fillLight.position.set(-100, 50, -100);
     fillLight.castShadow = false;
     this.scene.add(fillLight);

@@ -1,7 +1,4 @@
 import * as THREE from 'three';
-import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
-import { Font } from 'three/addons/loaders/FontLoader.js';
 
 export class ArenaManager {
   private scene: THREE.Scene;
@@ -40,7 +37,6 @@ export class ArenaManager {
     // Define colors for the floor pattern
     const primaryColor = new THREE.Color(0x2a2a2a); // Dark gray
     const secondaryColor = new THREE.Color(0x3a3a3a); // Slightly lighter gray
-    const accentColor = new THREE.Color(0x0066cc); // Blue accent
     
     const positions = floorGeometry.attributes.position.array;
     
@@ -269,5 +265,21 @@ export class ArenaManager {
   
   public getHazardObjects(): THREE.Object3D[] {
     return this.hazardObjects;
+  }
+
+  public reset(): void {
+    // Clear existing elements
+    this.arenaElements.forEach(element => {
+      this.scene.remove(element);
+    });
+    this.arenaElements = [];
+    
+    this.hazardObjects.forEach(object => {
+      this.scene.remove(object);
+    });
+    this.hazardObjects = [];
+    
+    // Recreate arena
+    this.createArena();
   }
 }

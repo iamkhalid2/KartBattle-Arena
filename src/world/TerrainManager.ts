@@ -79,6 +79,34 @@ export class TerrainManager {
     // No terrain decorations for better performance
   }
   
+  // Added road generation method referenced in World.ts
+  public generateRoads(chunkX: number, chunkZ: number, chunkSize: number): void {
+    // Simplified road generation for better performance
+    const roadWidth = 10;
+    const roadGroup = new THREE.Group();
+    
+    // Create a horizontal road with basic material
+    const horizontalRoadGeometry = new THREE.PlaneGeometry(chunkSize, roadWidth, 10, 1); // Reduced segments
+    const roadMaterial = new THREE.MeshLambertMaterial({ 
+      color: 0x333333,
+    });
+    
+    const horizontalRoad = new THREE.Mesh(horizontalRoadGeometry, roadMaterial);
+    horizontalRoad.rotation.x = -Math.PI / 2;
+    horizontalRoad.position.set(chunkX, 0.05, chunkZ); // Slightly above ground
+    roadGroup.add(horizontalRoad);
+    
+    // Create a vertical road that intersects the horizontal one
+    const verticalRoadGeometry = new THREE.PlaneGeometry(roadWidth, chunkSize, 1, 10); // Reduced segments
+    const verticalRoad = new THREE.Mesh(verticalRoadGeometry, roadMaterial);
+    verticalRoad.rotation.x = -Math.PI / 2;
+    verticalRoad.position.set(chunkX, 0.05, chunkZ); // Slightly above ground
+    roadGroup.add(verticalRoad);
+    
+    this.terrain.add(roadGroup);
+    this.roadElements.push(roadGroup);
+  }
+  
   // Simple noise function that approximates simplex-like patterns without requiring imports
   private simpleNoise(x: number, z: number): number {
     // Get grid cell coordinates and fractional part

@@ -260,7 +260,7 @@ export class Car {
   }
   
   // Add takeDamage method to handle damage from hazards - simplified
-  public takeDamage(amount: number, sourcePosition: THREE.Vector3): void {
+  public takeDamage(amount: number): void {
     this.health -= amount;
     if (this.health < 0) this.health = 0;
   }
