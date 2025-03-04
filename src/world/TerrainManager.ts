@@ -174,24 +174,52 @@ export class TerrainManager {
   }
   
   public reset(): void {
-    // Clear existing elements
+    // Properly clean up and remove all existing elements
+    
+    // Clean up road elements
     this.roadElements.forEach(road => {
+      // First remove from parent group
       this.terrain.remove(road);
+      
+      // Then dispose of all children's geometries and materials
+      if (road instanceof THREE.Group) {
+        road.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      }
     });
     this.roadElements = [];
     
+    // Clean up decorations similarly
     this.decorations.forEach(decoration => {
+      // First remove from parent group
       this.terrain.remove(decoration);
+      
+      // Then dispose of all children's geometries and materials
+      if (decoration instanceof THREE.Group) {
+        decoration.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        });
+      }
     });
     this.decorations = [];
     
     // Recreate terrain elements
-    // Note: createGround() doesn't need to be called again as the main ground mesh stays the same
-    
-    // Regenerate roads - using arena size for proper positioning
-    this.generateRoads(0, 0, this.worldSize * 0.4); // 0.4 is the arena size ratio used in getTerrainHeight
-    
-    // Add trees and other decorations
+    this.generateRoads(0, 0, this.worldSize * 0.4);
     this.addDecorations();
   }
   

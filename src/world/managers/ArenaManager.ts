@@ -542,16 +542,45 @@ export class ArenaManager {
   }
 
   public reset(): void {
-    // Clear existing elements
+    // Clean up hazard objects
+    this.hazardObjects.forEach(object => {
+      this.scene.remove(object);
+      // Dispose of geometries and materials
+      if (object instanceof THREE.Mesh) {
+        if (object.geometry) object.geometry.dispose();
+        if (Array.isArray(object.material)) {
+          object.material.forEach(mat => mat.dispose());
+        } else if (object.material) {
+          object.material.dispose();
+        }
+      }
+    });
+    this.hazardObjects = [];
+    
+    // Clean up arena elements (which include sponsor panels)
     this.arenaElements.forEach(element => {
       this.scene.remove(element);
+      // Dispose of geometries and materials
+      if (element instanceof THREE.Mesh) {
+        if (element.geometry) element.geometry.dispose();
+        if (Array.isArray(element.material)) {
+          element.material.forEach(mat => mat.dispose());
+        } else if (element.material) {
+          element.material.dispose();
+        }
+      }
     });
     this.arenaElements = [];
     
-    this.hazardObjects.forEach(object => {
-      this.scene.remove(object);
+    // Dispose of sponsor materials
+    this.sponsorMaterials.forEach(material => {
+      if (material.map) material.map.dispose();
+      material.dispose();
     });
-    this.hazardObjects = [];
+    this.sponsorMaterials = [];
+    
+    // No need to remove the arena walls and floor as they're static
+    // and will be recreated properly with the createArena call
     
     // Recreate arena
     this.createArena();

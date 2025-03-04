@@ -77,4 +77,17 @@ export class LightingManager {
     this.time += deltaTime;
     // No updates needed for static lights
   }
+  
+  public reset(): void {
+    // Remove all existing lights from the scene
+    this.lights.forEach(light => {
+      this.scene.remove(light);
+    });
+    
+    // Clear the lights array
+    this.lights = [];
+    
+    // Recreate the lights
+    this.createLights();
+  }
 }
