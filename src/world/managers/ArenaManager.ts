@@ -267,25 +267,84 @@ export class ArenaManager {
     const wallHeight = 15;
     
     try {
+      // Create text for "brought to you by" subheading
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      const width = 512;
+      const height = 256;
+      canvas.width = width;
+      canvas.height = height;
+      
+      if (context) {
+        // Clear canvas
+        context.fillStyle = 'rgba(0,0,0,0)';
+        context.fillRect(0, 0, width, height);
+        
+        // Add text with larger font and lower position
+        context.fillStyle = 'white';
+        context.font = 'bold 48px Arial'; // Increased from 32px to 48px
+        context.textAlign = 'center';
+        context.textBaseline = 'top';
+        context.fillText('BROUGHT TO YOU BY', width / 2, 50); // Moved from 20 to 50
+      }
+      
+      // Create texture from canvas
+      const textTexture = new THREE.CanvasTexture(canvas);
+      const textMaterial = new THREE.MeshBasicMaterial({
+        map: textTexture,
+        transparent: true
+      });
+
+      // Load the sponsor logo
       const loader = new THREE.TextureLoader();
-      const texture = await new Promise<THREE.Texture>((resolve) => {
-        loader.load('./public/sponsors/bustan.svg', resolve);
+      const logoTexture = await new Promise<THREE.Texture>((resolve) => {
+        loader.load('/sponsors/bustan.svg', resolve);
       });
       
       const sponsorMaterial = new THREE.MeshLambertMaterial({
-        map: texture,
+        map: logoTexture,
         transparent: true
       });
       
-      // Create simpler sponsor panel
-      const panelGeometry = new THREE.PlaneGeometry(10, 5);
-      const panel = new THREE.Mesh(panelGeometry, sponsorMaterial);
-      panel.position.set(0, wallHeight/2, -halfSize + 0.5);
-      panel.rotation.y = Math.PI;
+      // Create larger sponsor panels (increased size from 10x5 to 15x10)
+      const panelGeometry = new THREE.PlaneGeometry(15, 10);
       
-      this.scene.add(panel);
-      this.arenaElements.push(panel);
+      // Create smaller subheading panel
+      const textGeometry = new THREE.PlaneGeometry(12, 2);
+      
+      // Add sponsor panels to multiple walls for better visibility
+      const wallPositions = [
+        // North wall (facing south - inside the arena)
+        { position: new THREE.Vector3(0, wallHeight/2, -halfSize + 0.2), rotation: 0 },
+        // South wall (facing north - inside the arena)
+        { position: new THREE.Vector3(0, wallHeight/2, halfSize - 0.2), rotation: Math.PI },
+        // East wall (facing west - inside the arena)
+        { position: new THREE.Vector3(halfSize - 0.2, wallHeight/2, 0), rotation: -Math.PI/2 },
+        // West wall (facing east - inside the arena)
+        { position: new THREE.Vector3(-halfSize + 0.2, wallHeight/2, 0), rotation: Math.PI/2 }
+      ];
+      
+      // Add all panels to the scene
+      wallPositions.forEach(wall => {
+        // Add the "brought to you by" text panel above the logo
+        const textPanel = new THREE.Mesh(textGeometry, textMaterial);
+        textPanel.position.copy(wall.position);
+        textPanel.position.y += 6; // Position text above the logo
+        textPanel.rotation.y = wall.rotation;
+        
+        // Add the sponsor logo panel
+        const logoPanel = new THREE.Mesh(panelGeometry, sponsorMaterial);
+        logoPanel.position.copy(wall.position);
+        logoPanel.rotation.y = wall.rotation;
+        
+        this.scene.add(textPanel);
+        this.scene.add(logoPanel);
+        this.arenaElements.push(textPanel);
+        this.arenaElements.push(logoPanel);
+      });
+      
       this.sponsorMaterials.push(sponsorMaterial);
+      this.sponsorMaterials.push(textMaterial);
       
     } catch (error) {
       console.error('Error loading sponsor texture:', error);

@@ -76,7 +76,8 @@ export class TerrainManager {
     ground.receiveShadow = true;
     this.terrain.add(ground);
     
-    // No terrain decorations for better performance
+    // Add decorative elements like trees
+    this.addDecorations();
   }
   
   // Added road generation method referenced in World.ts
@@ -183,5 +184,71 @@ export class TerrainManager {
       this.terrain.remove(decoration);
     });
     this.decorations = [];
+    
+    // Recreate terrain elements
+    // Note: createGround() doesn't need to be called again as the main ground mesh stays the same
+    
+    // Regenerate roads - using arena size for proper positioning
+    this.generateRoads(0, 0, this.worldSize * 0.4); // 0.4 is the arena size ratio used in getTerrainHeight
+    
+    // Add trees and other decorations
+    this.addDecorations();
+  }
+  
+  // New method to add decorative elements like trees
+  private addDecorations(): void {
+    // Add trees around the edges of the world
+    const arenaRadius = this.worldSize * 0.4;
+    const outerRadius = this.worldSize * 0.8;
+    const numDecorations = 50; // Number of trees to add
+    
+    for (let i = 0; i < numDecorations; i++) {
+      // Random angle and distance from center
+      const angle = Math.random() * Math.PI * 2;
+      const distance = arenaRadius + Math.random() * (outerRadius - arenaRadius);
+      
+      // Position based on angle and distance
+      const x = Math.cos(angle) * distance;
+      const z = Math.sin(angle) * distance;
+      
+      // Get terrain height at this position
+      const y = this.getTerrainHeight(x, z);
+      
+      // Create a tree - simple cone and cylinder
+      const treeGroup = new THREE.Group();
+      
+      // Tree trunk
+      const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.7, 2, 6);
+      const trunkMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+      const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+      trunk.position.y = 1;
+      treeGroup.add(trunk);
+      
+      // Tree foliage - create 2-3 cones for a more interesting look
+      const foliageLayers = 2 + Math.floor(Math.random() * 2);
+      const foliageColor = new THREE.Color(0.0, 0.5 + Math.random() * 0.2, 0.0);
+      
+      for (let j = 0; j < foliageLayers; j++) {
+        const coneHeight = 3 - j * 0.5;
+        const coneRadius = 2 - j * 0.3;
+        const foliageGeometry = new THREE.ConeGeometry(coneRadius, coneHeight, 8);
+        const foliageMaterial = new THREE.MeshLambertMaterial({ color: foliageColor });
+        const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+        foliage.position.y = 2 + j * 1.5;
+        treeGroup.add(foliage);
+      }
+      
+      // Position the tree
+      treeGroup.position.set(x, y, z);
+      
+      // Random rotation and slight scale variation
+      treeGroup.rotation.y = Math.random() * Math.PI * 2;
+      const scale = 0.8 + Math.random() * 0.4;
+      treeGroup.scale.set(scale, scale, scale);
+      
+      // Add to scene and track
+      this.terrain.add(treeGroup);
+      this.decorations.push(treeGroup);
+    }
   }
 }

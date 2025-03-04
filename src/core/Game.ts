@@ -208,20 +208,32 @@ export class Game {
   private restartGame(): void {
     this.gameOver = false;
     this.score = 0;
+    
+    // Reset the car first
     this.car.reset();
     
-    // Move car to a spawn point
-    const spawnPoint = this.world.getRandomSpawnPoint();
-    this.car.setPosition(spawnPoint);
+    // Reset world (ensure complete re-initialization)
+    this.world.reset();
+    
+    // Important: Wait for all asynchronous tasks to complete
+    // before continuing with the game setup
+    setTimeout(() => {
+      // Move car to a spawn point after world has reset
+      const spawnPoint = this.world.getRandomSpawnPoint();
+      this.car.setPosition(spawnPoint);
+      
+      // Clear the accumulator to prevent physics catching up
+      this.accumulator = 0;
+      
+      // Update the last frame time to now
+      this.lastFrameTime = performance.now();
+    }, 100); // Small delay to ensure all async operations have completed
     
     // Remove game over message
     const gameOverElement = document.getElementById('gameOver');
     if (gameOverElement) {
       document.body.removeChild(gameOverElement);
     }
-    
-    // Reset world
-    this.world.reset();
   }
   
   private updateFpsDisplay(fps: number): void {

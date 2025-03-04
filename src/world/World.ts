@@ -149,13 +149,16 @@ export class World {
   }
   
   public reset(): void {
-    // Reset all managers
-    this.itemManager.reset();
-    this.obstacleManager.reset();
+    // Reset all managers without calling initializeWorld() again
+    this.skyboxManager.reset();
     this.hazardManager.reset();
     this.spawnManager.reset();
+    this.itemManager.reset();
+    this.obstacleManager.reset();
     this.arenaManager.reset();
     this.terrainManager.reset();
-    this.skyboxManager.reset();
+    
+    // Do NOT call initializeWorld() again, as each manager's reset method
+    // should handle recreating their respective elements properly
   }
 }
