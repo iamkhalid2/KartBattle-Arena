@@ -1,4 +1,6 @@
 // InputManager.ts - Manages keyboard inputs and touch inputs for mobile
+import { Logger } from './Logger';
+
 export class InputManager {
   private keys: { [key: string]: boolean } = {};
   private isMobile: boolean = false;
@@ -19,7 +21,7 @@ export class InputManager {
     if (this.isMobile) {
       this.setupTouchControls();
     }
-    
+
     // Listen for orientation changes
     window.addEventListener('resize', () => this.checkOrientation());
     this.checkOrientation();
@@ -32,22 +34,22 @@ export class InputManager {
 
   private setupTouchControls(): void {
     this.createMobileControls();
-    
+
     // Setup event listeners for the controls
     const accelerator = document.getElementById('accelerator');
     const brake = document.getElementById('brake');
     const steeringWheel = document.getElementById('steering-wheel');
-    
+
     if (accelerator) {
       accelerator.addEventListener('touchstart', () => { this.acceleratorPressed = true; });
       accelerator.addEventListener('touchend', () => { this.acceleratorPressed = false; });
     }
-    
+
     if (brake) {
       brake.addEventListener('touchstart', () => { this.brakePressed = true; });
       brake.addEventListener('touchend', () => { this.brakePressed = false; });
     }
-    
+
     if (steeringWheel) {
       steeringWheel.addEventListener('touchstart', (e) => { this.handleSteeringTouch(e); });
       steeringWheel.addEventListener('touchmove', (e) => { this.handleSteeringTouch(e); });
@@ -62,7 +64,7 @@ export class InputManager {
       });
     }
   }
-  
+
   private createMobileControls(): void {
     // Create container for mobile controls
     const controlsContainer = document.createElement('div');
@@ -75,7 +77,7 @@ export class InputManager {
     controlsContainer.style.display = 'flex';
     controlsContainer.style.justifyContent = 'space-between';
     controlsContainer.style.pointerEvents = 'none';
-    
+
     // Create pedals container (left side)
     const pedalsContainer = document.createElement('div');
     pedalsContainer.id = 'pedals';
@@ -84,7 +86,7 @@ export class InputManager {
     pedalsContainer.style.justifyContent = 'flex-end';
     pedalsContainer.style.padding = '20px';
     pedalsContainer.style.pointerEvents = 'none';
-    
+
     // Create accelerator pedal
     const accelerator = document.createElement('div');
     accelerator.id = 'accelerator';
@@ -98,7 +100,7 @@ export class InputManager {
     accelerator.style.justifyContent = 'center';
     accelerator.style.pointerEvents = 'auto';
     accelerator.innerHTML = 'GAS';
-    
+
     // Create brake pedal
     const brake = document.createElement('div');
     brake.id = 'brake';
@@ -111,14 +113,14 @@ export class InputManager {
     brake.style.justifyContent = 'center';
     brake.style.pointerEvents = 'auto';
     brake.innerHTML = 'BRAKE';
-    
+
     // Create steering container (right side)
     const steeringContainer = document.createElement('div');
     steeringContainer.style.display = 'flex';
     steeringContainer.style.alignItems = 'flex-end';
     steeringContainer.style.padding = '20px';
     steeringContainer.style.pointerEvents = 'none';
-    
+
     // Create joystick (replacing steering wheel)
     const steeringWheel = document.createElement('div');
     steeringWheel.id = 'steering-wheel';
@@ -129,7 +131,7 @@ export class InputManager {
     steeringWheel.style.border = '3px solid rgba(200, 200, 200, 0.7)';
     steeringWheel.style.pointerEvents = 'auto';
     steeringWheel.style.position = 'relative';
-    
+
     // Add joystick thumb/handle instead of spokes
     const joystickHandle = document.createElement('div');
     joystickHandle.id = 'joystick-handle';
@@ -142,9 +144,9 @@ export class InputManager {
     joystickHandle.style.left = '50%';
     joystickHandle.style.transform = 'translate(-50%, -50%)';
     joystickHandle.style.transition = 'transform 0.1s ease-out';
-    
+
     steeringWheel.appendChild(joystickHandle);
-    
+
     // Add controls to the DOM
     pedalsContainer.appendChild(accelerator);
     pedalsContainer.appendChild(brake);
@@ -152,7 +154,7 @@ export class InputManager {
     controlsContainer.appendChild(pedalsContainer);
     controlsContainer.appendChild(steeringContainer);
     document.body.appendChild(controlsContainer);
-    
+
     // Create the orientation prompt (hidden by default)
     const orientationPrompt = document.createElement('div');
     orientationPrompt.id = 'orientation-prompt';
@@ -169,18 +171,18 @@ export class InputManager {
     orientationPrompt.style.alignItems = 'center';
     orientationPrompt.style.zIndex = '1000';
     orientationPrompt.style.display = 'none';
-    
+
     const promptIcon = document.createElement('div');
     promptIcon.innerHTML = '↔️';
     promptIcon.style.fontSize = '48px';
     promptIcon.style.marginBottom = '20px';
-    
+
     const promptText = document.createElement('p');
     promptText.textContent = 'Please rotate your device to landscape mode for the best experience.';
     promptText.style.fontSize = '18px';
     promptText.style.textAlign = 'center';
     promptText.style.margin = '0 20px';
-    
+
     orientationPrompt.appendChild(promptIcon);
     orientationPrompt.appendChild(promptText);
     document.body.appendChild(orientationPrompt);
@@ -207,41 +209,41 @@ export class InputManager {
 
   private handleSteeringTouch(event: TouchEvent): void {
     event.preventDefault();
-    
+
     const steeringWheel = document.getElementById('steering-wheel');
     const joystickHandle = document.getElementById('joystick-handle');
     if (!steeringWheel || !joystickHandle) return;
-    
+
     const touch = event.touches[0];
     const wheelRect = steeringWheel.getBoundingClientRect();
     const wheelCenterX = wheelRect.left + wheelRect.width / 2;
-    
+
     // Mark joystick as active
     this.joystickActive = true;
-    
+
     // Calculate horizontal distance from center point
     const deltaX = touch.clientX - wheelCenterX;
-    
+
     // Calculate joystick position (constrained to wheel boundaries)
     const maxDistance = wheelRect.width / 2 - 20; // 20px is half of joystick handle width
     const joystickX = Math.max(-maxDistance, Math.min(maxDistance, deltaX));
-    
+
     // Calculate steering angle from joystick position (-1 to 1)
     this.steeringAngle = -(joystickX / maxDistance);
-    
+
     // Update joystick handle position
     joystickHandle.style.transform = `translate(calc(-50% + ${joystickX}px), -50%)`;
   }
-  
+
   private resetJoystick(): void {
     if (!this.joystickActive) return;
-    
+
     const joystickHandle = document.getElementById('joystick-handle');
     if (joystickHandle) {
       // Reset joystick handle position
       joystickHandle.style.transform = 'translate(-50%, -50%)';
     }
-    
+
     // Reset steering angle
     this.steeringAngle = 0;
     this.joystickActive = false;
@@ -249,10 +251,10 @@ export class InputManager {
 
   private checkOrientation(): void {
     if (!this.isMobile) return;
-    
+
     const orientationPrompt = document.getElementById('orientation-prompt');
     if (!orientationPrompt) return;
-    
+
     // Check if device is in portrait mode
     if (window.innerHeight > window.innerWidth) {
       orientationPrompt.style.display = 'flex';
@@ -264,7 +266,7 @@ export class InputManager {
   private toggleFullscreen(): void {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        Logger.error(`Error attempting to enable fullscreen: ${err.message}`);
       });
     } else {
       if (document.exitFullscreen) {

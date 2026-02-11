@@ -1,99 +1,105 @@
 # KartBattle Arena
 
-A lightweight, browser-based multiplayer battle car game where players drive vehicles, collect weapons, and eliminate opponents in fast-paced arena matches.
+A high-performance 3D kart racing game built with Three.js, TypeScript, and Vite. Race through a dynamic battle arena, avoid hazards, and collect power-ups!
 
-## 🎮 Game Overview
+## 🎮 Quick Start
 
-**KartBattle Arena** is a multiplayer battle car game focused on quick matches and easy setup. Players enter rooms with a simple code, drive customizable vehicles, collect mystery boxes for weapons, and battle until only one remains.
-
-## 1️⃣ Game Architecture (Minimal & Optimized)
-
-### Frontend (Three.js + WebSockets)
-- Players can **create** or **join** a room by entering a **6-digit code**
-- Players input only their **name** before entering
-- Game logic (movement, shooting, health, physics) runs primarily **client-side**
-- WebSockets handle **state synchronization** with the server
-
-### Backend (Lightweight Game Server)
-- **Colyseus (Recommended) or Socket.io** → WebSocket-based room management
-- **Google Cloud Run (Best for cost-efficiency) OR Compute Engine (Dedicated)** → Host the server
-- **In-memory state (NO DB)** → Room states are stored **only in RAM** (Redis optional for multiple instances)
-- **Auto-destroy empty rooms** → If no players remain in a room, it gets deleted
-
-## 2️⃣ Game Flow
-
-### 🔹 Room Creation & Joining
-1. Player **clicks "Create Room"** → Server assigns a **random 6-digit code** and waits for players
-2. Player **clicks "Join Room"** → They enter a code and their **name**, then the server checks if the room exists
-3. Once all players join, **game starts** (host can optionally trigger it)
-
-### 🔹 Gameplay (Core Mechanics)
-
-#### Movement & Shooting
-- Player movements (car controls) are handled **client-side** for responsiveness
-- WebSocket messages sync position updates every **30ms (tickrate ~30Hz)**
-- Shooting events trigger **server-side validation** before broadcasting to other players
-
-#### Mystery Boxes & Weapons
-- Boxes spawn randomly on the **server**
-- When a player collects one, the server **assigns a random weapon** and **broadcasts** it
-- Shooting events are processed on the **server first** before sending damage updates
-
-#### Health & Death
-- Server tracks each player's **health**
-- When a player's HP reaches **0**, they are **removed from the game**
-- The **last player standing wins**
-
-#### Room Closure
-- Once the game ends, the server **destroys the room** after a short delay
-
-## 3️⃣ Best Hosting Strategy (Fast & Cost-Efficient)
-
-| Component | Tech |
-|-----------|------|
-| **Game Server** | **Node.js + Colyseus (or Socket.io)**, hosted on **Google Cloud Run** (best for auto-scaling) OR **Compute Engine** (for more control) |
-| **Frontend Hosting** | Firebase Hosting (Fast, free tier) OR Vercel (Easy) |
-| **Database** | **None** (everything runs in-memory, no need for Firestore/SQL) |
-| **Scaling** | Since player count is low (~10-15), a **single Google Cloud Run instance** should be enough. If scaling up, use **Redis for state sharing** |
-
-## 4️⃣ Optimization Tips for a FAST Experience
-
-✅ **Keep WebSocket messages small** → Send only deltas (changes in position, not full coordinates)  
-✅ **Client-side interpolation & prediction** → Reduces lag for smooth movement  
-✅ **Use Fixed Timesteps (`dt = 16ms`)** → Keeps physics & movement consistent  
-✅ **Destroy inactive rooms quickly** → Saves memory  
-✅ **Use MessagePack or CBOR (not JSON)** → Smaller data packets = less latency  
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js (v14+)
-- npm or yarn
-
-### Installation
-1. Clone the repository
 ```bash
-git clone https://github.com/iamkhalid2/kartbattle-arena.git
-cd kartbattle-arena
-```
-
-2. Install dependencies
-```bash
+# Install dependencies
 npm install
-```
 
-3. Start development server
-```bash
+# Run development server
 npm run dev
 ```
 
-4. Build for production
-```bash
-npm run build
+Visit `http://localhost:5173` and start racing!
+
+## 🎯 Controls
+
+### Desktop
+- **↑ / W** - Accelerate
+- **↓ / S** - Brake / Reverse
+- **← / A** - Turn Left
+- **→ / D** - Turn Right  
+- **R** - Restart Game (after game over)
+
+### Mobile
+Touch controls appear automatically:
+- **Left side** - Gas & Brake pedals
+- **Right side** - Steering joystick
+- **Fullscreen button** - Top right corner
+
+## 🏗️ Architecture
+
+```
+src/
+├── core/           # Game orchestration & rendering
+│   └── Game.ts     # Main game loop, camera, renderer
+├── entities/       # Game objects
+│   └── Car.ts      # Player car with physics
+├── world/          # Environment systems
+│   ├── managers/   # Specialized world managers
+│   │   ├── ArenaManager.ts
+│   │   ├── HazardManager.ts
+│   │   ├── ItemManager.ts
+│   │   ├── LightingManager.ts
+│   │   └── SpawnManager.ts
+│   ├── World.ts
+│   ├── TerrainManager.ts
+│   └── SkyboxManager.ts
+├── utils/          # Utilities & helpers
+│   ├── InputManager.ts
+│   └── Logger.ts
+└── config/         # Configuration
+    └── constants.ts
 ```
 
-## 📝 Contributing
-We welcome contributions to KartBattle Arena! Please open an issue or pull request.
+## 🧪 Testing
 
-## 📜 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+```bash
+# Run tests
+npm test
+
+# Run tests with UI
+npm run test:ui
+
+# Generate coverage report
+npm run test:coverage
+```
+
+## 🚀 Building for Production
+
+```bash
+# Build optimized bundle
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## 🛠️ Tech Stack
+
+- **[Vite](https://vitejs.dev/)** - Lightning-fast build tool
+- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+- **[Three.js](https://threejs.org/)** - 3D rendering engine
+- **[Vitest](https://vitest.dev/)** - Unit testing framework
+
+## 🎨 Features
+
+- ✅ Smooth 60 FPS physics with fixed timestep
+- ✅ Dynamic arena with hazards and obstacles
+- ✅ Mobile-first responsive design
+- ✅ WebGL detection & graceful error handling
+- ✅ Environment-based configuration (.env support)
+- ✅ Performance monitoring (dev only)
+
+## 📄 License
+
+MIT
+
+## 🤝 Contributing
+
+Contributions welcome! Please ensure:
+- Tests pass (`npm test`)
+- Build succeeds (`npm run build`)
+- Code follows existing style

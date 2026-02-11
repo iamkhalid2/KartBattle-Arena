@@ -9,11 +9,12 @@ import { SpawnManager } from './managers/SpawnManager';
 import { HazardManager } from './managers/HazardManager';
 import { SkyboxManager } from './SkyboxManager';
 import { TerrainManager } from './TerrainManager';
+import { GAME_CONFIG } from '../config/constants';
 
 export class World {
-  private arenaSize = 200; // Size of the battle arena
-  private worldSize = 500; // Size of the overall world (beyond arena)
-  
+  private arenaSize = GAME_CONFIG.ARENA_SIZE;
+  private worldSize = GAME_CONFIG.WORLD_SIZE;
+
   // Modular manager classes
   private obstacleManager: ObstacleManager;
   private arenaManager: ArenaManager;
@@ -23,7 +24,7 @@ export class World {
   private hazardManager: HazardManager;
   private skyboxManager: SkyboxManager;
   private terrainManager: TerrainManager;
-  
+
   constructor(scene: THREE.Scene) {
     // Initialize managers
     this.obstacleManager = new ObstacleManager(scene);
@@ -34,7 +35,7 @@ export class World {
     this.hazardManager = new HazardManager(scene, this.arenaSize);
     this.skyboxManager = new SkyboxManager(scene);
     this.terrainManager = new TerrainManager(scene, this.worldSize);
-    
+
     // Initialize world environment
     this.initializeWorld();
   }
@@ -43,17 +44,17 @@ export class World {
     // Setup the world using our specialized managers in proper order
     // Sky first (background) - FIX: The skybox was already created in the constructor but we need to ensure it's visible
     // No need for an explicit method call as the skybox is created automatically in the SkyboxManager constructor
-    
+
     // Then terrain (ground outside arena)
     this.terrainManager.createGround();
     this.terrainManager.generateRoads(0, 0, this.arenaSize);
-    
+
     // Add lighting
     this.lightingManager.createLights();
-    
+
     // Then arena (main play area)
     this.arenaManager.createArena();
-    
+
     // Then obstacles and game elements
     this.obstacleManager.generateObstacles(0, 0, this.arenaSize);
     this.itemManager.createItemBoxes();
@@ -71,83 +72,83 @@ export class World {
     this.spawnManager.update();
     this.hazardManager.update(deltaTime);
   }
-  
+
   public updatePlayerPosition(playerPosition: THREE.Vector3): void {
     // Update skybox to follow player
     this.skyboxManager.updatePosition(playerPosition);
   }
-  
+
   public checkCollisions(car: Car): boolean {
     const carBoundingBox = car.getCollider();
-    
+
     // Check collisions with arena walls
     if (this.arenaManager.checkCollisions(carBoundingBox)) {
       return true;
     }
-    
+
     // Check collisions with obstacles
     if (this.obstacleManager.checkCollisions(carBoundingBox)) {
       return true;
     }
-    
+
     // Check collisions with hazards
     this.hazardManager.checkCollisions(carBoundingBox, car);
-    
+
     // Check collisions with item boxes and collect them
     this.itemManager.checkCollisions(carBoundingBox);
-    
+
     return false; // No collision that should stop the car
   }
-  
+
   public getTerrainHeightAt(x: number, z: number): number {
     // Get the height of terrain at given coordinates
     return this.terrainManager.getTerrainHeight(x, z);
   }
-  
+
   public getRandomSpawnPoint(): THREE.Vector3 {
     // Get all hazard positions to avoid spawning near them
     const hazardPositions = this.getHazardPositions();
-    
+
     // Use the improved spawn point method that avoids hazards
     return this.spawnManager.getRandomSpawnPointAwayFromHazards(hazardPositions);
   }
-  
+
   private getHazardPositions(): THREE.Vector3[] {
     const hazardPositions: THREE.Vector3[] = [];
-    
+
     // Get positions of all hazards in the HazardManager
     const hazardObjects = this.hazardManager.getHazardPositions();
     if (hazardObjects && hazardObjects.length) {
       hazardPositions.push(...hazardObjects);
     }
-    
+
     // Get positions of the central arena decoration
     const centralPosition = new THREE.Vector3(0, 0, 0);
     hazardPositions.push(centralPosition); // Avoid spawning at the center
-    
+
     return hazardPositions;
   }
-  
+
   public getEntitiesForMinimap(): any[] {
     const entities: any[] = [];
-    
+
     // Gather entities from all managers
     entities.push(...this.itemManager.getEntitiesForMinimap());
     entities.push(...this.obstacleManager.getEntitiesForMinimap());
     entities.push(...this.hazardManager.getEntitiesForMinimap());
     entities.push(...this.spawnManager.getEntitiesForMinimap());
-    
+
     return entities;
   }
-  
+
   public getWorldSize(): number {
     return this.worldSize;
   }
-  
+
   public getArenaSize(): number {
     return this.arenaSize;
   }
-  
+
   public reset(): void {
     // Reset all managers without calling initializeWorld() again
     this.skyboxManager.reset();
@@ -157,7 +158,7 @@ export class World {
     this.obstacleManager.reset();
     this.arenaManager.reset();
     this.terrainManager.reset();
-    
+
     // Do NOT call initializeWorld() again, as each manager's reset method
     // should handle recreating their respective elements properly
   }
