@@ -574,7 +574,7 @@ export class ArenaManager {
     
     // Dispose of sponsor materials
     this.sponsorMaterials.forEach(material => {
-      if (material.map) material.map.dispose();
+      if ((material as any).map) (material as any).map.dispose();
       material.dispose();
     });
     this.sponsorMaterials = [];
